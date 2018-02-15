@@ -47,4 +47,25 @@ private:
 	int response;
 };
 /////////////////// END PROCESS CLASS ////////////////////
+
+typedef vector<Process> Schedule;
+
+/////// OTHER HELPER FUNCTIONS TO USE FOR EACH PART //////
+// tturn a string of integers into a vector
+vector<int> processBurstString(string bString);
+
+// Fill a vector of processes from a file; close file
+void readProcessesFromFile(ifstream& in, Schedule& processes);
+
+// Helper function to sort unfinished processes according to time until they arrive
+// The processes have finished and have >= 0 time units away from arriving
+Schedule sortProcessesByArrivalTime(int time, Schedule processes);
+
+// Helper function to sort unfinished processes according to run time
+Schedule sortProcessesByRunTime(Schedule processes);
+
+// Helper function to compute and output averages
+void calcAvgTurnaroundAndResponse(Schedule s);
+
+
 #endif // PROCESS_H

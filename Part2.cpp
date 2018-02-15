@@ -13,90 +13,40 @@ using namespace std;
 
 typedef vector<Process> Schedule;
 
-// Helper function: turn a string of integers into a vector
-vector<int> processBurstString(string bString);
-
-// Fill a vector of processes from a file; close file
-void readProcessesFromFile(ifstream& in, Schedule& processes);
+// This file assumes:
+// 1. The process has only one CPU intensive burst
 
 // Run a first come first serve schedule with processes
 void fcfs(Schedule process);
-
 // Run a round robin schedule
 void rr(Schedule process);
-
 // Run a shortest job first schedule
 void sjf(Schedule processes);
-
-// Helper function to sort unfinished processes according to time until they arrive
-// The processes have finished and have are >= 0 time units away from arriving
-Schedule sortProcessesByArrivalTime(int time, Schedule processes);
-
-// Helper function to compute and output averages
-void calcAvgTurnaroundAndResponse(Schedule s);
 
 int main()
 {
 	ifstream in;
-	in.open("processes.txt");
+	in.open("processes2.txt");
 
 	// Prepare a vector of processes
 	Schedule processes;
 	readProcessesFromFile(in, processes);
-//	for (int i = 0; i < processes.size(); i++)
-//		processes[i].printBursts(cout);
 
 	cout << "//////////////////////// FCFS ////////////////////////" << endl;
 	// Simulate first come, first served
 	fcfs(processes);
 
-	cout << "//////////////////////// RR ////////////////////////" << endl;
+	cout << endl << endl;
+	cout << "//////////////////////// RR /////////////////////////" << endl;
 	// Simulate round robin
 	rr(processes);
 
+	cout << endl << endl;
+	cout << "//////////////////////// SJF ////////////////////////" << endl;
+	// Simulate shortest job first
+	sjf(processes);
+
 	return 0;
-}
-
-// Helper function: turn a string of integers from file into a vector
-vector<int> processBurstString(string bString)
-{
-	vector<int> bVec;
-	std::stringstream stream(bString);
-
-	int number;
-	while (stream >> number)
-		bVec.push_back(number);
-
-	return bVec;
-}
-
-// Fill a vector of processes from a file
-void readProcessesFromFile(ifstream& in, Schedule& processes)
-{
-	string id;
-	int arrival;
-	vector<int> bursts;
-
-	// Read the file line by line
-	while (!in.eof())
-	{
-		in >> id >> arrival;
-
-		// Read the bursts number by number
-		string burstString = "";
-		char z;
-		in.get(z);
-		while (z != '\n' && !in.eof())
-		{
-			burstString += z;
-			in.get(z);
-		}
-		bursts = processBurstString(burstString);
-		Process p = Process(id, arrival, bursts);
-		processes.push_back(p);
-	}
-	
-	in.close();
 }
 
 // Run a first come first serve schedule with processes
@@ -107,28 +57,14 @@ void fcfs(Schedule processes)
 	// Sort the processes by time until they arrive
 	Schedule sortedProcesses = sortProcessesByArrivalTime(time, processes);
 
-	int p = 0;
-	// Run the processes in sorted order until the last process is finished
-	while (!sortedProcesses[sortedProcesses.size()-1].isDone())
+	// Start the earliest process.
+	time = sortedProcesses[0].getArrivalTime();
+
+	for (unsigned int i = 0; i < sortedProcesses.size(); i++)
 	{
-		if (sortedProcesses[p].timeUntilArrival(time) <= 0 && sortedProcesses[p].getStartTime() == -1)
-		{
-			sortedProcesses[p].start(time);
-			time++;
-		}
-		else if (sortedProcesses[p].getRunTime() != -1)
-		{
-			time += sortedProcesses[p].getRunTime();
-			sortedProcesses[p].end(time);
-			p++;
-		}
-		// How do you process if burst has a -1?
-		/////////////////////////////////////////////////////////////////////////////////////////HERE
-		else
-		{
-			// This process runs indefinitely in FCFS
-			throw("Houston, we've got a problem.");
-		}
+		sortedProcesses[i].start(time);
+		time += sortedProcesses[i].getRunTime();
+		sortedProcesses[i].end(time);
 	}
 
 	cout << "TIME " << time << ": END." << endl;
@@ -155,51 +91,43 @@ void rr(Schedule processes)
 	bool allDone = false;
 	while (!allDone)
 	{
-		// If it is still the turn for the active process, advance time
-		cout << tempTime << " " << quanta << " " << tempTime%quanta << endl;
-		if (((tempTime == 0) || ((tempTime % quanta) > 0)) && (sortedProcesses[active].bursts[sortedProcesses[active].currentBurst] > 0))
+		// If process should end after quanta
+		if (sortedProcesses[active].getRunTime() == quanta)
 		{
-			tempTime++;
-			time++;
-			sortedProcesses[active].bursts[sortedProcesses[active].currentBurst]--;
+			time += quanta;
+			sortedProcesses[active].end(time);
+			// active = (active+1) % sortedProcesses.size();
 		}
-		// If the active process finished its burst, start next process
-		else
+		// Process will run over its quanta
+		else if (sortedProcesses[active].getRunTime() > quanta)
 		{
-			if (sortedProcesses[active].bursts[sortedProcesses[active].bursts.size()-1] == 0)
-			{
-				sortedProcesses[active].end(time);
-			}
-			if (sortedProcesses[active].bursts[sortedProcesses[active].currentBurst] == 0)
-			{
-				sortedProcesses[active].currentBurst++;
-			}
+			time += quanta;
+			sortedProcesses[active].bursts[0] -= quanta;
+		}
+		// Process will end before quanta ends
+		else if (sortedProcesses[active].getRunTime() < quanta)
+		{
+			time += sortedProcesses[active].getRunTime();
+			sortedProcesses[active].end(time);
+		}
 
-			allDone = true;
-			for (int i = 0; i < processes.size(); i++)
-			{
-				if (!sortedProcesses[i].isDone())
-					allDone = false;
-			}
+		// See if the Round robin is over
+		allDone = true;
+		for (unsigned int i = 0; i < processes.size(); i++)
+		{
+			if (!sortedProcesses[i].isDone())
+				allDone = false;
+		}
 
+		// If it is not over, context switch
+		if (!allDone)
+		{
 			active = (active+1) % sortedProcesses.size();
 			while ((sortedProcesses[active].isDone() || time < sortedProcesses[active].getArrivalTime()) && !allDone)
 			{
 				active = (active+1) % sortedProcesses.size();
 			}
-			if (!allDone)
-			{
-				sortedProcesses[active].start(time);
-				tempTime = 0;
-			}
-		}
-
-
-		allDone = true;
-		for (int i = 0; i < processes.size(); i++)
-		{
-			if (!sortedProcesses[i].isDone())
-				allDone = false;
+			sortedProcesses[active].start(time);
 		}
 	}
 
@@ -213,54 +141,41 @@ void sjf(Schedule processes)
 {
 	int time = 0;
 
-}
+	// Sort the processes by time until they arrive
+	Schedule s = sortProcessesByRunTime(processes);
 
-// Helper function to sort unfinished processes according to time until they arrive
-// The processes have not arrived yet
-Schedule sortProcessesByArrivalTime(int time, Schedule processes)
-{
-	vector<Process> sortedByTimes;
-	sortedByTimes.push_back(processes[0]);
+	// Get earliest arrival time
+	time = s[0].getArrivalTime();
+	s[0].start(time);
+	int tempTime = 0;
+	int active = 0;
 
-	// First find the earliest arrival time for any process
-	for (int i = 1; i < processes.size(); i++)
+	bool allDone = false;
+	while (!allDone)
 	{
-		int idx = 0;
-		bool stop = false;
-		if (processes[i].timeUntilArrival(time) >= 0)
+		// Check if the active process will end
+		i
+	}
+
+
+	// See if the Shortest Job First is over
+	allDone = true;
+	for (unsigned int i = 0; i < processes.size(); i++)
+	{
+		if (!s[i].isDone())
+			allDone = false;
+	}
+
+	// If it is not over, context switch
+	if (!allDone)
+	{
+		active = (active+1) % s.size();
+		while ((s[active].isDone() || time < s[active].getArrivalTime()) && !allDone)
 		{
-			while (idx < sortedByTimes.size() && stop != true)
-			{
-				if (processes[i].timeUntilArrival(time) >= sortedByTimes[idx].timeUntilArrival(time))
-				{
-					idx++;
-				}
-				else
-				{
-					stop = true;
-				}
-			}
-			sortedByTimes.insert(sortedByTimes.begin()+idx, processes[i]);
+			active = (active+1) % s.size();
 		}
+		s[active].start(time);
 	}
 
-	return sortedByTimes;
-}
 
-// Helper function to compute and output averages
-void calcAvgTurnaroundAndResponse(Schedule s)
-{
-	float avgTurnaround = 0;
-	float avgResponseTime = 0;
-	for (int i = 0; i < s.size(); i++)
-	{
-		// Calculate average turnaround and response time
-		avgTurnaround += s[i].getTurnaround();
-		avgResponseTime += s[i].getResponse();
-	}
-	avgTurnaround /= s.size();
-	avgResponseTime /= s.size();
-
-	cout << "Average turnaround time was: " << avgTurnaround << endl;
-	cout << "Average response time was: " << avgResponseTime << endl;
 }
