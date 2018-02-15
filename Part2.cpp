@@ -13,27 +13,13 @@ using namespace std;
 
 typedef vector<Process> Schedule;
 
-// Helper function: turn a string of integers into a vector
-vector<int> processBurstString(string bString);
-
-// Fill a vector of processes from a file; close file
-void readProcessesFromFile(ifstream& in, Schedule& processes);
 
 // Run a first come first serve schedule with processes
 void fcfs(Schedule process);
-
 // Run a round robin schedule
 void rr(Schedule process);
-
 // Run a shortest job first schedule
 void sjf(Schedule processes);
-
-// Helper function to sort unfinished processes according to time until they arrive
-// The processes have finished and have are >= 0 time units away from arriving
-Schedule sortProcessesByArrivalTime(int time, Schedule processes);
-
-// Helper function to compute and output averages
-void calcAvgTurnaroundAndResponse(Schedule s);
 
 int main()
 {
@@ -55,48 +41,6 @@ int main()
 	rr(processes);
 
 	return 0;
-}
-
-// Helper function: turn a string of integers from file into a vector
-vector<int> processBurstString(string bString)
-{
-	vector<int> bVec;
-	std::stringstream stream(bString);
-
-	int number;
-	while (stream >> number)
-		bVec.push_back(number);
-
-	return bVec;
-}
-
-// Fill a vector of processes from a file
-void readProcessesFromFile(ifstream& in, Schedule& processes)
-{
-	string id;
-	int arrival;
-	vector<int> bursts;
-
-	// Read the file line by line
-	while (!in.eof())
-	{
-		in >> id >> arrival;
-
-		// Read the bursts number by number
-		string burstString = "";
-		char z;
-		in.get(z);
-		while (z != '\n' && !in.eof())
-		{
-			burstString += z;
-			in.get(z);
-		}
-		bursts = processBurstString(burstString);
-		Process p = Process(id, arrival, bursts);
-		processes.push_back(p);
-	}
-	
-	in.close();
 }
 
 // Run a first come first serve schedule with processes
@@ -213,54 +157,4 @@ void sjf(Schedule processes)
 {
 	int time = 0;
 
-}
-
-// Helper function to sort unfinished processes according to time until they arrive
-// The processes have not arrived yet
-Schedule sortProcessesByArrivalTime(int time, Schedule processes)
-{
-	vector<Process> sortedByTimes;
-	sortedByTimes.push_back(processes[0]);
-
-	// First find the earliest arrival time for any process
-	for (int i = 1; i < processes.size(); i++)
-	{
-		int idx = 0;
-		bool stop = false;
-		if (processes[i].timeUntilArrival(time) >= 0)
-		{
-			while (idx < sortedByTimes.size() && stop != true)
-			{
-				if (processes[i].timeUntilArrival(time) >= sortedByTimes[idx].timeUntilArrival(time))
-				{
-					idx++;
-				}
-				else
-				{
-					stop = true;
-				}
-			}
-			sortedByTimes.insert(sortedByTimes.begin()+idx, processes[i]);
-		}
-	}
-
-	return sortedByTimes;
-}
-
-// Helper function to compute and output averages
-void calcAvgTurnaroundAndResponse(Schedule s)
-{
-	float avgTurnaround = 0;
-	float avgResponseTime = 0;
-	for (int i = 0; i < s.size(); i++)
-	{
-		// Calculate average turnaround and response time
-		avgTurnaround += s[i].getTurnaround();
-		avgResponseTime += s[i].getResponse();
-	}
-	avgTurnaround /= s.size();
-	avgResponseTime /= s.size();
-
-	cout << "Average turnaround time was: " << avgTurnaround << endl;
-	cout << "Average response time was: " << avgResponseTime << endl;
 }
