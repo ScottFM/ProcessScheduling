@@ -13,13 +13,17 @@ using namespace std;
 
 typedef vector<Process> Schedule;
 
+// This file assumes:
+// 1. Processes arrive at different times
+// 2. Processes can have alternating CPU and IO bursts
+// 3. There is a max number of context switches.
 
 // Run a first come first serve schedule with processes
-void fcfs(Schedule process);
+void fcfs(Schedule process, int quanta);
 // Run a round robin schedule
-void rr(Schedule process);
+void rr(Schedule process, int quanta);
 // Run a shortest job first schedule
-void sjf(Schedule processes);
+void sjf(Schedule processes, int quanta);
 
 int main()
 {
@@ -32,19 +36,29 @@ int main()
 //	for (int i = 0; i < processes.size(); i++)
 //		processes[i].printBursts(cout);
 
+	int quanta;
+	cout << "Enter the length of time slice quanta: "; cin >> quanta;
+
+	cout << endl << endl;
 	cout << "//////////////////////// FCFS ////////////////////////" << endl;
 	// Simulate first come, first served
-	fcfs(processes);
+	fcfs(processes, quanta);
 
-	cout << "//////////////////////// RR ////////////////////////" << endl;
+	cout << endl << endl;
+	cout << "//////////////////////// RR /////////////////////////" << endl;
 	// Simulate round robin
-	rr(processes);
+	rr(processes, quanta);
+
+	cout << endl << endl;
+	cout << "//////////////////////// SJF ////////////////////////" << endl;
+	// Simulate shortest job first
+	rr(processes, quanta);
 
 	return 0;
 }
 
 // Run a first come first serve schedule with processes
-void fcfs(Schedule processes)
+void fcfs(Schedule processes, int q)
 {
 	int time = 0;
 
@@ -81,11 +95,9 @@ void fcfs(Schedule processes)
 }
 
 // Run a round robin schedule
-void rr(Schedule processes)
+void rr(Schedule processes, int q)
 {
 	int time = 0;
-	int quanta;
-	cout << "Enter the length of time slice quanta: "; cin >> quanta;
 
 	// Sort the processes by time until they arrive
 	Schedule sortedProcesses = sortProcessesByArrivalTime(time, processes);
@@ -100,8 +112,8 @@ void rr(Schedule processes)
 	while (!allDone)
 	{
 		// If it is still the turn for the active process, advance time
-		cout << tempTime << " " << quanta << " " << tempTime%quanta << endl;
-		if (((tempTime == 0) || ((tempTime % quanta) > 0)) && (sortedProcesses[active].bursts[sortedProcesses[active].currentBurst] > 0))
+//		cout << tempTime << " " << q << " " << tempTime%q << endl;
+		if (((tempTime == 0) || ((tempTime % q) > 0)) && (sortedProcesses[active].bursts[sortedProcesses[active].currentBurst] > 0))
 		{
 			tempTime++;
 			time++;
@@ -120,7 +132,7 @@ void rr(Schedule processes)
 			}
 
 			allDone = true;
-			for (int i = 0; i < processes.size(); i++)
+			for (unsigned int i = 0; i < processes.size(); i++)
 			{
 				if (!sortedProcesses[i].isDone())
 					allDone = false;
@@ -140,7 +152,7 @@ void rr(Schedule processes)
 
 
 		allDone = true;
-		for (int i = 0; i < processes.size(); i++)
+		for (unsigned int i = 0; i < processes.size(); i++)
 		{
 			if (!sortedProcesses[i].isDone())
 				allDone = false;
@@ -153,8 +165,69 @@ void rr(Schedule processes)
 }
 
 // Run a shortest job first schedule
-void sjf(Schedule processes)
+void sjf(Schedule processes, int q)
 {
 	int time = 0;
 
+	// Sort the processes by time until they arrive
+	Schedule s = sortProcessesByRunTime(processes);
+
+	// Start the first possible shortest process
+	int active = 0;
+	string activeP;
+	bool started = false;
+	while(!started)
+	{
+		for (unsigned int i = 0; i < s.size(); i++)
+		{
+			if (s[i].getArrivalTime() <= time)
+			{
+				s[i].start(time);
+				active = i;
+				activeP = s[i].getId();
+				started = true;
+				break;
+			}
+		}
+	}	
+
+	bool allDone = false;
+	while (!allDone)
+	{
+		time++;
+		s[active].bursts[0]--;
+		s = sortProcessesByRunTime(s);
+		// Check if the active process should end
+		if (s[active].bursts[0] == 0)
+		{
+			s[active].end(time);
+
+		}
+
+		// See if the Shortest Job First is over
+		allDone = true;
+		for (unsigned int i = 0; i < processes.size(); i++)
+		{
+			if (!s[i].isDone())
+				allDone = false;
+		}
+
+		// If it is not over, context switch
+		if (!allDone)
+		{
+			active = 0;
+			while ((s[active].isDone() || time < s[active].getArrivalTime()) && !allDone)
+			{
+				active = (active+1) % s.size();
+			}
+			if (s[active].getId() != activeP)
+			{
+				s[active].start(time);
+				activeP = s[active].getId();
+			}
+		}
+	}
+	cout << "TIME " << time << ": END." << endl;
+
+	calcAvgTurnaroundAndResponse(s);
 }
