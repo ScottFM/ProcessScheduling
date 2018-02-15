@@ -64,6 +64,9 @@ Schedule sortProcessesByArrivalTime(int time, Schedule processes);
 // Helper function to sort unfinished processes according to run time
 Schedule sortProcessesByRunTime(Schedule processes);
 
+// The processes have finished and have are >= 0 time units away from arriving
+Schedule sortProcessesByArrivalTime(int time, Schedule processes);
+
 // Helper function to compute and output averages
 void calcAvgTurnaroundAndResponse(Schedule s);
 

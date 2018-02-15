@@ -212,9 +212,6 @@ Schedule sortProcessesByRunTime(Schedule processes)
 	return sorted;
 }
 
-
-
-
 // Helper function to compute and output averages
 void calcAvgTurnaroundAndResponse(Schedule s)
 {
