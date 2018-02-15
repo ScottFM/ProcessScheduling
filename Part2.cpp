@@ -87,6 +87,7 @@ void rr(Schedule processes)
 	sortedProcesses[0].start(time);
 	int tempTime = 0;
 	int active = 0;
+	string activeP = sortedProcesses[active].getId();
 
 	bool allDone = false;
 	while (!allDone)
@@ -127,7 +128,11 @@ void rr(Schedule processes)
 			{
 				active = (active+1) % sortedProcesses.size();
 			}
-			sortedProcesses[active].start(time);
+			if (sortedProcesses[active].getId() != activeP)
+			{
+				sortedProcesses[active].start(time);
+				activeP = sortedProcesses[active].getId();
+			}
 		}
 	}
 
@@ -144,38 +149,62 @@ void sjf(Schedule processes)
 	// Sort the processes by time until they arrive
 	Schedule s = sortProcessesByRunTime(processes);
 
-	// Get earliest arrival time
-	time = s[0].getArrivalTime();
-	s[0].start(time);
-	int tempTime = 0;
+	// Start the first possible shortest process
 	int active = 0;
+	string activeP;
+	bool started = false;
+	while(!started)
+	{
+		for (unsigned int i = 0; i < s.size(); i++)
+		{
+			if (s[i].getArrivalTime() <= time)
+			{
+				s[i].start(time);
+				active = i;
+				activeP = s[i].getId();
+				started = true;
+				break;
+			}
+		}
+	}	
 
 	bool allDone = false;
 	while (!allDone)
 	{
-		// Check if the active process will end
-		i
-	}
-
-
-	// See if the Shortest Job First is over
-	allDone = true;
-	for (unsigned int i = 0; i < processes.size(); i++)
-	{
-		if (!s[i].isDone())
-			allDone = false;
-	}
-
-	// If it is not over, context switch
-	if (!allDone)
-	{
-		active = (active+1) % s.size();
-		while ((s[active].isDone() || time < s[active].getArrivalTime()) && !allDone)
+		time++;
+		s[active].bursts[0]--;
+		s = sortProcessesByRunTime(s);
+		// Check if the active process should end
+		if (s[active].bursts[0] == 0)
 		{
-			active = (active+1) % s.size();
+			s[active].end(time);
+
 		}
-		s[active].start(time);
+
+		// See if the Shortest Job First is over
+		allDone = true;
+		for (unsigned int i = 0; i < processes.size(); i++)
+		{
+			if (!s[i].isDone())
+				allDone = false;
+		}
+
+		// If it is not over, context switch
+		if (!allDone)
+		{
+			active = 0;
+			while ((s[active].isDone() || time < s[active].getArrivalTime()) && !allDone)
+			{
+				active = (active+1) % s.size();
+			}
+			if (s[active].getId() != activeP)
+			{
+				s[active].start(time);
+				activeP = s[active].getId();
+			}
+		}
 	}
+	cout << "TIME " << time << ": END." << endl;
 
-
+	calcAvgTurnaroundAndResponse(s);
 }
