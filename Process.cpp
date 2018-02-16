@@ -67,11 +67,11 @@ void Process::start(int time)
 	if (startTime == -1)
 	{
 		startTime = time;
-		currentBurst = 0;
+		//currentBurst = 0;
 	}
 	if (response == -1)
 		response = time - arrivalTime;
-	if (isReady)
+	//if (bursts[getCurrentBurst()] != 1)
 		cout << "TIME " << setw(2) << time << ": " << getId() << " is running in CPU." << endl;
 }
 int Process::getStartTime()
