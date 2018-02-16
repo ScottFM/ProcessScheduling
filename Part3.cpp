@@ -40,19 +40,19 @@ int main()
 //		processes[i].printBursts(cout);
 
 	int quanta, switches;
-	//cout << "Enter the length of time slice quanta: "; cin >> quanta;
-	//cout << "Enter the max number of context switches: "; cin >> switches;
+	cout << "Enter the length of time slice quanta: "; cin >> quanta;
+	cout << "Enter the max number of context switches: "; cin >> switches;
 	quanta = 2;
 	switches = 20;
-	//cout << endl << endl;
-	//cout << "//////////////////////// FCFS ////////////////////////" << endl;
-	//// Simulate first come, first served
-	//fcfs(processes, switches);
+	cout << endl << endl;
+	cout << "//////////////////////// FCFS ////////////////////////" << endl;
+	// Simulate first come, first served
+	fcfs(processes, switches);
 
-	//cout << endl << endl;
-	//cout << "//////////////////////// RR /////////////////////////" << endl;
-	//// Simulate round robin
-	//rr(processes, quanta, switches);
+	cout << endl << endl;
+	cout << "//////////////////////// RR /////////////////////////" << endl;
+	// Simulate round robin
+	rr(processes, quanta, switches);
 
 	cout << endl << endl;
 	cout << "//////////////////////// SJF ////////////////////////" << endl;
@@ -437,7 +437,7 @@ void sjf(Schedule processes, int switches)
 				// Burst longer than quanta
 				else if (s[active].burstsLeft[s[active].getCurrentBurst()] > 1)
 				{
-					time++;;
+					time++;
 					s[active].burstsLeft[s[active].getCurrentBurst()]--;
 				}
 			}
@@ -469,17 +469,43 @@ void sjf(Schedule processes, int switches)
 		// If it is not over, context switch
 		if (!allDone)
 		{
-			active = (active+1) % s.size();
-
-			if (s[active].getArrivalTime() <= time)
+			int currentLow;
+			int tempActive = -1;
+			if (s[active].burstsLeft[s[active].getCurrentBurst()] == 0 ||
+				s[active].bursts[s[active].getCurrentBurst()] == 1)
 			{
-				if(!s[active].isDone())
+				currentLow = 1000;
+				tempActive = active;
+			}
+			else
+				currentLow = s[active].burstsLeft[s[active].getCurrentBurst()];
+			for (unsigned int i = 0; i < s.size(); i++)
+			{
+				if(tempActive != -1)
 				{
-					if (s[active].getId() != activeP)
+					if(i != tempActive)
 					{
-						if (s[active].bursts[s[active].getCurrentBurst()] != 1)
-							s[active].start(time);
+						if(s[i].burstsLeft[s[i].getCurrentBurst()] < currentLow && s[i].getArrivalTime() <= time && !s[i].isDone() )
+						{
+							active = i;
+							break;
+						}
 					}
+				}
+				else
+				{
+					if(s[i].burstsLeft[s[i].getCurrentBurst()] < currentLow && s[i].getArrivalTime() <= time && !s[i].isDone() )
+					{
+						active = i;
+						break;
+					}
+				}
+			}
+			if (s[active].getId() != activeP)
+			{
+				if (s[active].bursts[s[active].getCurrentBurst()] != 1)
+				{
+					s[active].start(time);
 					numS++;
 				}
 			}
