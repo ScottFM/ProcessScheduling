@@ -16,12 +16,13 @@ Process::Process(string id, int arrTime, vector<int> newBursts)
 	setId(id);
 	setArrivalTime(arrTime);
 	bursts = newBursts;
-	done = false;
+	setIsDone(false);
 	startTime = -1;
 	finishTime = -1;
 	turnaround = -1;
 	response = -1;
-	currentBurst = 0;
+	setCurrentBurst(0);
+	setIsReady(true);
 }
 
 string Process::getId()
@@ -64,10 +65,14 @@ void Process::setIsDone(bool isDone)
 void Process::start(int time)
 {
 	if (startTime == -1)
+	{
 		startTime = time;
+		currentBurst = 0;
+	}
 	if (response == -1)
 		response = time - arrivalTime;
-	cout << "TIME " << setw(2) << time << ": " << getId() << " is running in CPU." << endl;
+	if (isReady)
+		cout << "TIME " << setw(2) << time << ": " << getId() << " is running in CPU." << endl;
 }
 int Process::getStartTime()
 {
@@ -102,6 +107,22 @@ int Process::getRunTime()
 int Process::getResponse()
 {
 	return response;
+}
+bool Process::getIsReady()
+{
+	return isReady;
+}
+void Process::setIsReady(bool ready)
+{
+	isReady = ready;
+}
+int Process::getCurrentBurst()
+{
+	return currentBurst;
+}
+void Process::setCurrentBurst(int b)
+{
+	currentBurst = b;
 }
 /////////////////// END PROCESS CLASS ////////////////////
 
@@ -228,4 +249,14 @@ void calcAvgTurnaroundAndResponse(Schedule s)
 
 	cout << "Average turnaround time was: " << avgTurnaround << endl;
 	cout << "Average response time was: " << avgResponseTime << endl;
+}
+
+// Helper function to modify object in queue
+int getProcessLocWithId(string id, Schedule s)
+{
+	for (unsigned int i = 0; i < s.size(); i++)
+	{
+		if (s[i].getId() == id)
+			return i;
+	}
 }

@@ -33,9 +33,12 @@ public:
 	int getTurnaround();
 	int getRunTime();
 	int getResponse();
+	bool getIsReady();
+	void setIsReady(bool isReady);
+	int getCurrentBurst();
+	void setCurrentBurst(int b);
 	
 	vector<int> bursts;
-	int currentBurst;
 private:
 	string id;
 	int arrivalTime;
@@ -45,6 +48,8 @@ private:
 	int turnaround;
 	int runTime;
 	int response;
+	bool isReady;
+	int currentBurst;
 };
 /////////////////// END PROCESS CLASS ////////////////////
 
@@ -70,5 +75,7 @@ Schedule sortProcessesByArrivalTime(int time, Schedule processes);
 // Helper function to compute and output averages
 void calcAvgTurnaroundAndResponse(Schedule s);
 
+// Helper function to modify object in queue
+int getProcessLocWithId(string id, Schedule s);
 
 #endif // PROCESS_H
