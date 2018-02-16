@@ -16,6 +16,7 @@ Process::Process(string id, int arrTime, vector<int> newBursts)
 	setId(id);
 	setArrivalTime(arrTime);
 	bursts = newBursts;
+	burstsLeft = newBursts;
 	setIsDone(false);
 	startTime = -1;
 	finishTime = -1;
@@ -203,6 +204,7 @@ Schedule sortProcessesByArrivalTime(int time, Schedule processes)
 }
 
 // Helper function to sort unfinished processes according to run time
+// Sort according to element at current burst
 Schedule sortProcessesByRunTime(Schedule processes)
 {
 	vector<Process> sorted;
@@ -213,11 +215,11 @@ Schedule sortProcessesByRunTime(Schedule processes)
 	{
 		unsigned int idx = 0;
 		bool stop = false;
-		if (processes[i].getRunTime() >= 0)
+		if (processes[i].burstsLeft[processes[i].getCurrentBurst()] >= 0)
 		{
 			while (idx < sorted.size() && stop != true)
 			{
-				if (processes[i].getRunTime() >= sorted[idx].getRunTime())
+				if (processes[i].burstsLeft[processes[i].getCurrentBurst()] >= sorted[idx].bursts[sorted[idx].getCurrentBurst()])
 				{
 					idx++;
 				}

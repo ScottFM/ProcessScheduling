@@ -39,6 +39,7 @@ public:
 	void setCurrentBurst(int b);
 	
 	vector<int> bursts;
+	vector<int> burstsLeft;
 private:
 	string id;
 	int arrivalTime;
