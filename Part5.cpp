@@ -6,6 +6,7 @@
 #include <algorithm>	// for finding element in vector
 #include <iomanip>
 #include "math.h"		// for ceil
+#include "stdlib.h"		// for rand
 
 // Process class
 #include "Process.h"
@@ -20,8 +21,8 @@ typedef vector<Process> Schedule;
 // 3. There is a max number of context switches.
 // 4. There will never be a CPU sequence of only -1.
 
-// Simulate shorted remaining time first
-void srtf(Schedule processes, int switches);
+// Simulate shorted remaining time first with a lottery
+void lottery(Schedule processes, int switches);
 
 int main()
 {
@@ -33,22 +34,22 @@ int main()
 	readProcessesFromFile(in, processes);
 
 	int switches;
-	cout << "Enter the max number of context switches: "; cin >> switches;
-//	switches = 20;
+//	cout << "Enter the max number of context switches: "; cin >> switches;
+	switches = 20;
 
 	cout << endl << endl;
-	cout << "//////////////////////// SRTF ////////////////////////" << endl;
-	// Simulate shortest job first with calculated average
-	srtf(processes, switches);
+	cout << "//////////////////////// LOTTERY ////////////////////////" << endl;
+	// Simulate shortest remaining time first with a lottery
+	lottery(processes, switches);
 
 	return 0;
 }
 
-// Simulate shorted remaining time first
-void srtf(Schedule processes, int switches)
+// Simulate shorted remaining time first with a lottery
+void lottery(Schedule processes, int switches)
 {
 	int time = 0;
-	int est = 5;
+	int est = 3;
 	float alpha = 0.5;
 
 	// Sort the processes by estimate
