@@ -37,6 +37,8 @@ public:
 	void setIsReady(bool isReady);
 	int getCurrentBurst();
 	void setCurrentBurst(int b);
+	int getBurstAvg();
+	void setBurstAvg(int avg);
 	
 	vector<int> bursts;
 	vector<int> burstsLeft;
@@ -51,6 +53,7 @@ private:
 	int response;
 	bool isReady;
 	int currentBurst;
+	int burstAvg;
 };
 /////////////////// END PROCESS CLASS ////////////////////
 
@@ -70,8 +73,11 @@ Schedule sortProcessesByArrivalTime(int time, Schedule processes);
 // Helper function to sort unfinished processes according to run time
 Schedule sortProcessesByRunTime(Schedule processes);
 
-// The processes have finished and have are >= 0 time units away from arriving
+// Helper function to sort unfinished processes according to arrival time
 Schedule sortProcessesByArrivalTime(int time, Schedule processes);
+
+// Helper function to sort unfinished processes according to burst average
+Schedule sortProcessesByAvg(Schedule processes);
 
 // Helper function to compute and output averages
 void calcAvgTurnaroundAndResponse(Schedule s);
