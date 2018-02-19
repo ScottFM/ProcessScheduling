@@ -132,6 +132,14 @@ void Process::setBurstAvg(int avg)
 {
 	burstAvg = avg;
 }
+int Process::getTickets()
+{
+	return tickets;
+}
+void Process::setTickets(int t)
+{
+	tickets = t;
+}
 /////////////////// END PROCESS CLASS ////////////////////
 
 typedef vector<Process> Schedule;

@@ -6,7 +6,9 @@
 #include <algorithm>	// for finding element in vector
 #include <iomanip>
 #include "math.h"		// for ceil
-#include "stdlib.h"		// for rand
+#include <random>
+#include <time.h>
+#include <stdlib.h>
 
 // Process class
 #include "Process.h"
@@ -36,6 +38,7 @@ int main()
 	int switches;
 //	cout << "Enter the max number of context switches: "; cin >> switches;
 	switches = 20;
+	srand((unsigned) time(NULL));
 
 	cout << endl << endl;
 	cout << "//////////////////////// LOTTERY ////////////////////////" << endl;
@@ -51,6 +54,7 @@ void lottery(Schedule processes, int switches)
 	int time = 0;
 	int est = 3;
 	float alpha = 0.5;
+	int totalTix = 0;
 
 	// Sort the processes by estimate
 	// Don't need to sort by arrival time due to assumption 1
@@ -66,15 +70,52 @@ void lottery(Schedule processes, int switches)
 	int active = 0;
 	int numS = 0;
 	bool allDone = false;
+	int draw = 0;
 
 	// Run the processes in sorted order until the last process is finished
 	while (!allDone && numS < switches)
 	{
-		// Always start the process with the lowest average
+		// Redistribute the tickets
 		s = sortProcessesByAvg(s);
-		active = 0;
-		while(s[active].isDone())
-			active++;
+		int lowestEst = s[0].getBurstAvg();
+		int highestEst = s[s.size()-1].getBurstAvg();
+		totalTix = 0;
+		for (unsigned int i = 0; i < s.size(); i++)
+		{
+			int avg = s[i].getBurstAvg();
+			int num;
+
+			// Highest priority
+			if(avg == lowestEst)
+				num = 10;
+			// Lowest priority
+			else if(avg == highestEst)
+				num = 1;
+			// Intermediate priority
+			else
+				num = 5;
+
+			s[i].setTickets(num);
+			totalTix += num;
+		}
+
+		// Pull a winner from the tickets
+		draw = (rand() % totalTix) + 1;
+		int currentTotal = 0;
+		for (unsigned int i = 0; i < s.size(); i++)
+		{
+			if(!s[i].isDone())
+			{
+				if(draw > currentTotal && draw <= currentTotal + s[i].getTickets())
+				{
+//					cout << "Process " << s[i].getId() << " was drawn with a chance of " << s[i].getTickets() << "/" << totalTix << endl;
+					active = i;
+					break;
+				}
+				currentTotal += s[i].getTickets();
+			}
+		}
+
 		if(s[active].getId() != activeP)
 		{
 			s[active].start(time);
@@ -90,7 +131,7 @@ void lottery(Schedule processes, int switches)
 		// Calculate the new estimate
 		float nextEst = (alpha*s[active].bursts[s[active].getCurrentBurst()]) + ((1-alpha)*s[active].getBurstAvg());
 		s[active].setBurstAvg(ceil(nextEst));
-		cout << "New estimate for " << s[active].getId() << " = " << ceil(nextEst) << endl;
+//		cout << "New estimate for " << s[active].getId() << " = " << ceil(nextEst) << endl;
 		if(s[active].getCurrentBurst() == s[active].bursts.size()-1)
 		{
 			s[active].end(time);
