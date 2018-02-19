@@ -208,9 +208,7 @@ void rr(Schedule processes, int q, int switches)
 // Run a multi-level feedback queue
 void mlfq(Schedule processes, int quanta, int switches)
 {
-	int time = 0;
 
-	// Start by putting all processes into priority1 queue
 
 
 }

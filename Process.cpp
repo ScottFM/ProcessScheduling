@@ -24,6 +24,7 @@ Process::Process(string id, int arrTime, vector<int> newBursts)
 	response = -1;
 	setCurrentBurst(0);
 	setIsReady(true);
+	setBurstAvg(0);
 }
 
 string Process::getId()
@@ -68,11 +69,10 @@ void Process::start(int time)
 	if (startTime == -1)
 	{
 		startTime = time;
-		//currentBurst = 0;
 	}
 	if (response == -1)
 		response = time - arrivalTime;
-	cout << " " << setw(2) << time << ":" << getId() << endl;
+	cout << "TIME " << setw(2) << time << ": " << getId() << " is running in CPU." << endl;
 }
 int Process::getStartTime()
 {
@@ -124,6 +124,22 @@ void Process::setCurrentBurst(int b)
 {
 	currentBurst = b;
 }
+int Process::getBurstAvg()
+{
+	return burstAvg;
+}
+void Process::setBurstAvg(int avg)
+{
+	burstAvg = avg;
+}
+int Process::getTickets()
+{
+	return tickets;
+}
+void Process::setTickets(int t)
+{
+	tickets = t;
+}
 /////////////////// END PROCESS CLASS ////////////////////
 
 typedef vector<Process> Schedule;
@@ -174,7 +190,7 @@ void readProcessesFromFile(ifstream& in, vector<Process>& processes)
 // The processes have not arrived yet
 Schedule sortProcessesByArrivalTime(int time, Schedule processes)
 {
-	vector<Process> sortedByTimes;
+	Schedule sortedByTimes;
 	sortedByTimes.push_back(processes[0]);
 
 	// First find the earliest arrival time for any process
@@ -206,7 +222,7 @@ Schedule sortProcessesByArrivalTime(int time, Schedule processes)
 // Sort according to element at current burst
 Schedule sortProcessesByRunTime(Schedule processes)
 {
-	vector<Process> sorted;
+	Schedule sorted;
 	sorted.push_back(processes[0]);
 
 	// First find the earliest arrival time for any process
@@ -229,6 +245,35 @@ Schedule sortProcessesByRunTime(Schedule processes)
 			}
 			sorted.insert(sorted.begin()+idx, processes[i]);
 		}
+	}
+
+	return sorted;
+}
+
+// Helper function to sort unfinished processes according to run time
+// Sort according to element at current burst
+Schedule sortProcessesByAvg(Schedule processes)
+{
+	Schedule sorted;
+	sorted.push_back(processes[0]);
+
+	// First find the earliest arrival time for any process
+	for (unsigned int i = 1; i < processes.size(); i++)
+	{
+		unsigned int idx = 0;
+		bool stop = false;
+		while (idx < sorted.size() && stop != true)
+		{
+			if (processes[i].getBurstAvg() >= sorted[idx].getBurstAvg())
+			{
+				idx++;
+			}
+			else
+			{
+				stop = true;
+			}
+		}
+		sorted.insert(sorted.begin()+idx, processes[i]);
 	}
 
 	return sorted;

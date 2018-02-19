@@ -43,8 +43,6 @@ int main()
 	int quanta, switches;
 	cout << "Enter the length of time slice quanta: "; cin >> quanta;
 	cout << "Enter the max number of context switches: "; cin >> switches;
-	quanta = 2;
-	switches = 20;
 	cout << endl << endl;
 	cout << "//////////////////////// FCFS ////////////////////////" << endl;
 	// Simulate first come, first served
@@ -524,13 +522,3 @@ void sjf(Schedule processes, int switches)
 		cout << "Max number of context switches was reached before all processes ended." << endl;
 	}
 }
-
-
-
-
-
-
-
-
-
-
