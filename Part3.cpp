@@ -75,7 +75,7 @@ void fcfs(Schedule processes, int switches)
 	if(s[0].getArrivalTime() > 0)
 	{
 		activeP = "IDLE";
-		cout << "TIME " << setw(2) << time << ": IDLE." << endl;
+		cout << time << ":IDLE";
 	}
 
 	time = s[0].getArrivalTime();
