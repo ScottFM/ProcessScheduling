@@ -93,7 +93,7 @@ void fcfs(Schedule processes, int switches)
 	while (!allDone && numS < switches)
 	{
 		// Clean out a process from IO if it got missed somehow
-		if (io.size() > 0 && io.front().bursts[io.front().getCurrentBurst()] == 0)
+		if (io.size() > 0 && io.front().burstsLeft[io.front().getCurrentBurst()] == 0)
 		{
 			string pid = io.front().getId();
 			int loc = getProcessLocWithId(pid, s);
@@ -123,9 +123,9 @@ void fcfs(Schedule processes, int switches)
 
 				// And as time passes, update those processes waiting in the IO queue
 				int countdown = s[active].bursts[s[active].getCurrentBurst()];
-				while (io.size() > 0 && io.front().bursts[io.front().getCurrentBurst()] <= countdown)
+				while (io.size() > 0 && io.front().burstsLeft[io.front().getCurrentBurst()] <= countdown)
 				{
-					countdown -= io.front().bursts[io.front().getCurrentBurst()];
+					countdown -= io.front().burstsLeft[io.front().getCurrentBurst()];
 					string pid = io.front().getId();
 					int loc = getProcessLocWithId(pid, s);
 					s[loc].setIsReady(true);
@@ -138,7 +138,7 @@ void fcfs(Schedule processes, int switches)
 				}
 				if(io.size() > 0 && countdown > 0)
 				{
-					io.front().bursts[io.front().getCurrentBurst()] -= countdown;
+					io.front().burstsLeft[io.front().getCurrentBurst()] -= countdown;
 				}
 
 				// Finish active process if it is at its end
@@ -180,7 +180,7 @@ void fcfs(Schedule processes, int switches)
 			{
 				string pid = io.front().getId();
 				int loc = getProcessLocWithId(pid, s);
-				if (io.front().bursts[io.front().getCurrentBurst()] == 1)
+				if (io.front().burstsLeft[io.front().getCurrentBurst()] == 1)
 				{
 					s[loc].setIsReady(true);
 					s[loc].setCurrentBurst(s[loc].getCurrentBurst()+1);
@@ -192,7 +192,7 @@ void fcfs(Schedule processes, int switches)
 				}
 				else
 				{
-					io.front().bursts[s[loc].getCurrentBurst()] -= 1;
+					io.front().burstsLeft[s[loc].getCurrentBurst()] -= 1;
 				}
 			}
 		}
@@ -206,8 +206,6 @@ void fcfs(Schedule processes, int switches)
 			active = (active+1) % s.size();
 			while (s[active].getArrivalTime() > time || s[active].isDone() || s[active].getId() == activeP && !s[active].getIsReady())
 				active = (active+1) % s.size();
-			//if (activeP == "IDLE")
-			//	active = 0;
 
 			if(s[active].getCurrentBurst() % 2 != 1 && !s[active].isDone())
 			{
@@ -220,7 +218,14 @@ void fcfs(Schedule processes, int switches)
 
 	cout << time << ":END." << endl;
 
-	if (numS <= switches && allDone)
+	bool allFiniteEnded = true;
+	for (unsigned int i = 0; i < s.size(); i++)
+	{
+		if (s[i].getRunTime() != -1 && !s[i].isDone())
+			allFiniteEnded = false;
+	}
+
+	if (numS <= switches && allFiniteEnded)
 	{
 		calcAvgTurnaroundAndResponse(s);
 	}

@@ -286,14 +286,17 @@ void calcAvgTurnaroundAndResponse(Schedule s)
 	float avgResponseTime = 0;
 	for (unsigned int i = 0; i < s.size(); i++)
 	{
-		// Calculate average turnaround and response time
-		avgTurnaround += s[i].getTurnaround();
+		if (s[i].isDone())
+		{
+			// Calculate average turnaround and response time
+			avgTurnaround += s[i].getTurnaround();
+		}
 		avgResponseTime += s[i].getResponse();
 	}
 	avgTurnaround /= s.size();
 	avgResponseTime /= s.size();
 
-	cout << "Average turnaround time was: " << avgTurnaround << endl;
+	cout << "Average turnaround time for finite processes was: " << avgTurnaround << endl;
 	cout << "Average response time was: " << avgResponseTime << endl;
 }
 
