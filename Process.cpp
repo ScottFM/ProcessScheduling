@@ -16,12 +16,15 @@ Process::Process(string id, int arrTime, vector<int> newBursts)
 	setId(id);
 	setArrivalTime(arrTime);
 	bursts = newBursts;
-	done = false;
+	burstsLeft = newBursts;
+	setIsDone(false);
 	startTime = -1;
 	finishTime = -1;
 	turnaround = -1;
 	response = -1;
-	currentBurst = 0;
+	setCurrentBurst(0);
+	setIsReady(true);
+	setBurstAvg(0);
 }
 
 string Process::getId()
@@ -64,10 +67,12 @@ void Process::setIsDone(bool isDone)
 void Process::start(int time)
 {
 	if (startTime == -1)
+	{
 		startTime = time;
+	}
 	if (response == -1)
 		response = time - arrivalTime;
-	cout << "TIME " << setw(2) << time << ": " << getId() << " is running in CPU." << endl;
+	cout << time << ":" << getId() << " ";
 }
 int Process::getStartTime()
 {
@@ -102,6 +107,38 @@ int Process::getRunTime()
 int Process::getResponse()
 {
 	return response;
+}
+bool Process::getIsReady()
+{
+	return isReady;
+}
+void Process::setIsReady(bool ready)
+{
+	isReady = ready;
+}
+int Process::getCurrentBurst()
+{
+	return currentBurst;
+}
+void Process::setCurrentBurst(int b)
+{
+	currentBurst = b;
+}
+int Process::getBurstAvg()
+{
+	return burstAvg;
+}
+void Process::setBurstAvg(int avg)
+{
+	burstAvg = avg;
+}
+int Process::getTickets()
+{
+	return tickets;
+}
+void Process::setTickets(int t)
+{
+	tickets = t;
 }
 /////////////////// END PROCESS CLASS ////////////////////
 
@@ -153,7 +190,7 @@ void readProcessesFromFile(ifstream& in, vector<Process>& processes)
 // The processes have not arrived yet
 Schedule sortProcessesByArrivalTime(int time, Schedule processes)
 {
-	vector<Process> sortedByTimes;
+	Schedule sortedByTimes;
 	sortedByTimes.push_back(processes[0]);
 
 	// First find the earliest arrival time for any process
@@ -182,9 +219,10 @@ Schedule sortProcessesByArrivalTime(int time, Schedule processes)
 }
 
 // Helper function to sort unfinished processes according to run time
+// Sort according to element at current burst
 Schedule sortProcessesByRunTime(Schedule processes)
 {
-	vector<Process> sorted;
+	Schedule sorted;
 	sorted.push_back(processes[0]);
 
 	// First find the earliest arrival time for any process
@@ -192,11 +230,11 @@ Schedule sortProcessesByRunTime(Schedule processes)
 	{
 		unsigned int idx = 0;
 		bool stop = false;
-		if (processes[i].getRunTime() >= 0)
+		if (processes[i].burstsLeft[processes[i].getCurrentBurst()] >= 0)
 		{
 			while (idx < sorted.size() && stop != true)
 			{
-				if (processes[i].getRunTime() >= sorted[idx].getRunTime())
+				if (processes[i].burstsLeft[processes[i].getCurrentBurst()] >= sorted[idx].bursts[sorted[idx].getCurrentBurst()])
 				{
 					idx++;
 				}
@@ -212,8 +250,34 @@ Schedule sortProcessesByRunTime(Schedule processes)
 	return sorted;
 }
 
+// Helper function to sort unfinished processes according to run time
+// Sort according to element at current burst
+Schedule sortProcessesByAvg(Schedule processes)
+{
+	Schedule sorted;
+	sorted.push_back(processes[0]);
 
+	// First find the earliest arrival time for any process
+	for (unsigned int i = 1; i < processes.size(); i++)
+	{
+		unsigned int idx = 0;
+		bool stop = false;
+		while (idx < sorted.size() && stop != true)
+		{
+			if (processes[i].getBurstAvg() >= sorted[idx].getBurstAvg())
+			{
+				idx++;
+			}
+			else
+			{
+				stop = true;
+			}
+		}
+		sorted.insert(sorted.begin()+idx, processes[i]);
+	}
 
+	return sorted;
+}
 
 // Helper function to compute and output averages
 void calcAvgTurnaroundAndResponse(Schedule s)
@@ -231,4 +295,14 @@ void calcAvgTurnaroundAndResponse(Schedule s)
 
 	cout << "Average turnaround time was: " << avgTurnaround << endl;
 	cout << "Average response time was: " << avgResponseTime << endl;
+}
+
+// Helper function to modify object in queue
+int getProcessLocWithId(string id, Schedule s)
+{
+	for (unsigned int i = 0; i < s.size(); i++)
+	{
+		if (s[i].getId() == id)
+			return i;
+	}
 }
