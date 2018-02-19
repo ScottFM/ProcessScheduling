@@ -20,9 +20,10 @@ typedef vector<Process> Schedule;
 // 3. There is a max number of context switches.
 // 4. There will never be a CPU sequence of only -1.
 // 5. Quanta do not pertain to FCFS
+// 6. A CPU burst will come first and last. An IO burst will never start or finish the sequence
 
 // Run a first come first serve schedule with processes
-void fcfs(Schedule process,  int switches);
+void fcfs(Schedule process, int switches);
 // Run a round robin schedule
 void rr(Schedule process, int quanta, int switches);
 // Run a shortest job first schedule
