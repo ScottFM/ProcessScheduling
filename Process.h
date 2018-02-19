@@ -39,6 +39,8 @@ public:
 	void setCurrentBurst(int b);
 	int getBurstAvg();
 	void setBurstAvg(int avg);
+	int getTickets();
+	void setTickets(int t);
 	
 	vector<int> bursts;
 	vector<int> burstsLeft;
@@ -54,6 +56,7 @@ private:
 	bool isReady;
 	int currentBurst;
 	int burstAvg;
+	int tickets;
 };
 /////////////////// END PROCESS CLASS ////////////////////
 
