@@ -19,7 +19,7 @@ typedef vector<Process> Schedule;
 // Run a first come first serve schedule with processes
 void fcfs(Schedule process);
 // Run a round robin schedule
-void rr(Schedule process);
+void rr(Schedule process, int quanta);
 // Run a shortest job first schedule
 void sjf(Schedule processes);
 
@@ -32,6 +32,11 @@ int main()
 	Schedule processes;
 	readProcessesFromFile(in, processes);
 
+	int quanta;
+	cout << "PART 2- Simple Burst Stats" << endl;
+	cout << "Enter the length of time slice quanta for round robin: "; cin >> quanta;
+
+	cout << endl << endl;
 	cout << "//////////////////////// FCFS ////////////////////////" << endl;
 	// Simulate first come, first served
 	fcfs(processes);
@@ -39,7 +44,7 @@ int main()
 	cout << endl << endl;
 	cout << "//////////////////////// RR /////////////////////////" << endl;
 	// Simulate round robin
-	rr(processes);
+	rr(processes, quanta);
 
 	cout << endl << endl;
 	cout << "//////////////////////// SJF ////////////////////////" << endl;
@@ -67,17 +72,15 @@ void fcfs(Schedule processes)
 		sortedProcesses[i].end(time);
 	}
 
-	cout << "TIME " << time << ": END." << endl;
+	cout << time << ":END" << endl;
 
 	calcAvgTurnaroundAndResponse(sortedProcesses);
 }
 
 // Run a round robin schedule
-void rr(Schedule processes)
+void rr(Schedule processes, int quanta)
 {
 	int time = 0;
-	int quanta;
-	cout << "Enter the length of time slice quanta: "; cin >> quanta;
 
 	// Sort the processes by time until they arrive
 	Schedule sortedProcesses = sortProcessesByArrivalTime(time, processes);
@@ -85,7 +88,6 @@ void rr(Schedule processes)
 	// Get earliest arrival time
 	time = sortedProcesses[0].getArrivalTime();
 	sortedProcesses[0].start(time);
-	int tempTime = 0;
 	int active = 0;
 	string activeP = sortedProcesses[active].getId();
 
@@ -97,7 +99,6 @@ void rr(Schedule processes)
 		{
 			time += quanta;
 			sortedProcesses[active].end(time);
-			// active = (active+1) % sortedProcesses.size();
 		}
 		// Process will run over its quanta
 		else if (sortedProcesses[active].getRunTime() > quanta)
@@ -136,7 +137,7 @@ void rr(Schedule processes)
 		}
 	}
 
-	cout << "TIME " << time << ": END." << endl;
+	cout << time << ":END" << endl;
 
 	calcAvgTurnaroundAndResponse(sortedProcesses);
 }
@@ -166,6 +167,7 @@ void sjf(Schedule processes)
 				break;
 			}
 		}
+		time++;
 	}	
 
 	bool allDone = false;
@@ -204,7 +206,7 @@ void sjf(Schedule processes)
 			}
 		}
 	}
-	cout << "TIME " << time << ": END." << endl;
+	cout << time << ":END" << endl;
 
 	calcAvgTurnaroundAndResponse(s);
 }

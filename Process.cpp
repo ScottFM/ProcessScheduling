@@ -72,7 +72,7 @@ void Process::start(int time)
 	}
 	if (response == -1)
 		response = time - arrivalTime;
-	cout << "TIME " << setw(2) << time << ": " << getId() << " is running in CPU." << endl;
+	cout << time << ":" << getId() << " ";
 }
 int Process::getStartTime()
 {
