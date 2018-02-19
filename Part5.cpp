@@ -36,8 +36,8 @@ int main()
 	readProcessesFromFile(in, processes);
 
 	int switches;
-//	cout << "Enter the max number of context switches: "; cin >> switches;
-	switches = 20;
+	cout << "Enter the max number of context switches: "; cin >> switches;
+//	switches = 20;
 	srand((unsigned) time(NULL));
 
 	cout << endl << endl;
