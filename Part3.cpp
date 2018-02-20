@@ -30,6 +30,12 @@ void rr(Schedule process, int quanta, int switches);
 // Run a shortest job first schedule
 void sjf(Schedule processes, int switches);
 
+/////////////////////// Helper functions ////////////////////////////
+// Helper function for finishing
+void finish(int time, int num, int switches, Schedule s);
+// Helper function to check if schedule is stumped
+void checkAllIoOrNotArrived(queue<Process>& io, Schedule& s, string& activeP, int& time, bool& allDone);
+
 int main()
 {
 	ifstream in;
@@ -41,10 +47,10 @@ int main()
 
 	int quanta, switches;
 	cout << "PART 3- Complex Bursts" << endl;
-//	cout << "Enter the length of time slice quanta for round robin: "; cin >> quanta;
-//	cout << "Enter the max number of context switches: "; cin >> switches;
-	quanta = 2;
-	switches = 20;
+	cout << "Enter the length of time slice quanta for round robin: "; cin >> quanta;
+	cout << "Enter the max number of context switches: "; cin >> switches;
+	//quanta = 2;
+	//switches = 20;
 
 	//cout << endl << endl;
 	//cout << "//////////////////////// FCFS ////////////////////////" << endl;
@@ -77,7 +83,7 @@ void fcfs(Schedule processes, int switches)
 	if(s[0].getArrivalTime() > 0)
 	{
 		activeP = "IDLE";
-		cout << time << ":IDLE";
+		cout << time << ":IDLE ";
 	}
 	time = s[0].getArrivalTime();
 	s[0].start(time);
@@ -92,120 +98,58 @@ void fcfs(Schedule processes, int switches)
 	// Run the processes in sorted order until the last process is finished
 	while (!allDone && numS < switches)
 	{
-		// Clean out a process from IO if it got missed somehow
-		if (io.size() > 0 && io.front().burstsLeft[io.front().getCurrentBurst()] == 0)
-		{
-			string pid = io.front().getId();
-			int loc = getProcessLocWithId(pid, s);
-			s[loc].setIsReady(true);
-			s[loc].setCurrentBurst(s[active].getCurrentBurst()+1);
-			if (s[loc].bursts[s[loc].getCurrentBurst()] == -1)
-			{
-				s[loc].setCurrentBurst(0);
-			}
-			io.pop();
-		}
-
+		// See if the current process is ready to run
 		if (s[active].getIsReady() && s[active].getArrivalTime() <= time && !s[active].isDone())
 		{
-			// See if CPU or IO burst is scheduled for active process
-			// Add process to queue if it is at IO burst
-			if (s[active].getCurrentBurst() % 2 == 1)
+			// First see if you are at the end of a repeating sequence
+			if (s[active].bursts[s[active].getCurrentBurst()] == -1)
 			{
-				s[active].setIsReady(false);
-				io.push(s[active]);
+				s[active].setCurrentBurst(0);
+				s[active].burstsLeft = s[active].bursts;
 			}
-			// Or handle CPU if it is at CPU burst
-			else
+			
+			// Let this process run for its CPU burst duration
+			time += s[active].bursts[s[active].getCurrentBurst()];
+
+			// And as time passes, update those processes waiting in the IO queue
+			int countdown = s[active].bursts[s[active].getCurrentBurst()];
+			while (io.size() > 0 && io.front().burstsLeft[io.front().getCurrentBurst()] <= countdown)
 			{
-				// Let this process run for its duration
-				time += s[active].bursts[s[active].getCurrentBurst()];
-
-				// And as time passes, update those processes waiting in the IO queue
-				int countdown = s[active].bursts[s[active].getCurrentBurst()];
-				while (io.size() > 0 && io.front().burstsLeft[io.front().getCurrentBurst()] <= countdown)
-				{
-					countdown -= io.front().burstsLeft[io.front().getCurrentBurst()];
-					string pid = io.front().getId();
-					int loc = getProcessLocWithId(pid, s);
-					s[loc].setIsReady(true);
-					s[loc].setCurrentBurst(s[active].getCurrentBurst()+1);
-					if (s[loc].bursts[s[loc].getCurrentBurst()] == -1)
-					{
-						s[loc].setCurrentBurst(0);
-					}
-					io.pop();
-				}
-				if(io.size() > 0 && countdown > 0)
-				{
-					io.front().burstsLeft[io.front().getCurrentBurst()] -= countdown;
-				}
-
-				// Finish active process if it is at its end
-				if (s[active].getCurrentBurst() == s[active].bursts.size()-1)
-				{
-					s[active].end(time);
-				}
-				// Or else continue on to the process's next burst
-				else
-				{
-					s[active].setCurrentBurst(s[active].getCurrentBurst()+1);
-					if (s[active].bursts[s[active].getCurrentBurst()] == -1)
-					{
-						s[active].setCurrentBurst(0);
-					}
-				}
-			}
-		}
-
-		bool allIoOrNotArrived = true;
-		allDone = true;
-		for (unsigned int i = 0; i < s.size(); i++)
-		{
-			if (s[i].getIsReady() && s[i].getArrivalTime() <= time && !s[i].isDone())
-				allIoOrNotArrived = false;
-			if (!s[i].isDone())
-				allDone = false;
-		}
-
-		if (allIoOrNotArrived && !allDone )
-		{
-			if (activeP != "IDLE")
-			{
-				activeP = "IDLE";
-				cout << time << ":IDLE ";
-			}
-			time++;
-			if (io.size() > 0)
-			{
+				countdown -= io.front().burstsLeft[io.front().getCurrentBurst()];
 				string pid = io.front().getId();
 				int loc = getProcessLocWithId(pid, s);
-				if (io.front().burstsLeft[io.front().getCurrentBurst()] == 1)
-				{
-					s[loc].setIsReady(true);
-					s[loc].setCurrentBurst(s[loc].getCurrentBurst()+1);
-					if (s[loc].bursts[s[loc].getCurrentBurst()] == -1)
-					{
-						s[loc].setCurrentBurst(0);
-					}
-					io.pop();
-				}
-				else
-				{
-					io.front().burstsLeft[s[loc].getCurrentBurst()] -= 1;
-				}
+				s[loc].setIsReady(true);
+				s[loc].setCurrentBurst(s[loc].getCurrentBurst()+1);
+				io.pop();
+			}
+			if(io.size() > 0 && countdown > 0)
+			{
+				io.front().burstsLeft[io.front().getCurrentBurst()] -= countdown;
+			}
+
+			// Finish the process if it is at its end
+			if(s[active].getCurrentBurst() == s.size()-1)
+			{
+				s[active].end(time);
+			}
+			// Otherwise the next burst is IO; push into IO queue
+			else
+			{
+				s[active].setIsReady(false);
+				s[active].setCurrentBurst(s[active].getCurrentBurst()+1);
+				io.push(s[active]);
 			}
 		}
 
+		checkAllIoOrNotArrived(io, s, activeP, time, allDone);
 		// If it is not over, context switch
 		if (!allDone)
 		{
-			// Increment the active only one time
 			active = (active+1) % s.size();
 			while (s[active].getArrivalTime() > time || s[active].isDone() || s[active].getId() == activeP && !s[active].getIsReady())
 				active = (active+1) % s.size();
 
-			if(s[active].getCurrentBurst() % 2 != 1 && !s[active].isDone())
+			if(!s[active].isDone())
 			{
 				if(s[active].getId() != activeP)
 				{
@@ -217,23 +161,7 @@ void fcfs(Schedule processes, int switches)
 		}
 	}
 
-	cout << time << ":END." << endl;
-
-	bool allFiniteEnded = true;
-	for (unsigned int i = 0; i < s.size(); i++)
-	{
-		if (s[i].getRunTime() != -1 && !s[i].isDone())
-			allFiniteEnded = false;
-	}
-
-	if (numS <= switches && allFiniteEnded)
-	{
-		calcAvgTurnaroundAndResponse(s);
-	}
-	else
-	{
-		cout << "Max number of context switches was reached before all processes ended." << endl;
-	}
+	finish(time, numS, switches, s);
 }
 
 // Run a round robin schedule
@@ -249,7 +177,7 @@ void rr(Schedule processes, int q, int switches)
 	if(s[0].getArrivalTime() > 0)
 	{
 		activeP = "IDLE";
-		cout << time << ":IDLE";
+		cout << time << ":IDLE ";
 	}
 	time = s[0].getArrivalTime();
 	s[0].start(time);
@@ -260,137 +188,76 @@ void rr(Schedule processes, int q, int switches)
 	int active = 0;
 	int numS = 0;
 	bool allDone = false;
+	int t = 0;
 	// Run the processes in sorted order until the last process is finished
 	while (!allDone && numS < switches)
 	{
-		// Clean out a process from IO if it got missed somehow
-		if (io.size() > 0 && io.front().burstsLeft[io.front().getCurrentBurst()] == 0)
-		{
-			string pid = io.front().getId();
-			int loc = getProcessLocWithId(pid, s);
-			s[loc].setIsReady(true);
-			s[loc].setCurrentBurst(s[active].getCurrentBurst()+1);
-			if (s[loc].bursts[s[loc].getCurrentBurst()] == -1)
-			{
-				s[loc].setCurrentBurst(0);
-			}
-			io.pop();
-		}
-
+		// See if the current process is ready to run
 		if (s[active].getIsReady() && s[active].getArrivalTime() <= time && !s[active].isDone())
 		{
-			// See if CPU or IO burst is scheduled for active process
-			// Add process to queue if it is at IO burst
-			if (s[active].getCurrentBurst() % 2 == 1)
+			// First see if you are at the end of a repeating sequence
+			if (s[active].bursts[s[active].getCurrentBurst()] == -1)
 			{
-				s[active].setIsReady(false);
-				io.push(s[active]);
+				s[active].setCurrentBurst(0);
 			}
-			// Or handle CPU if it is at CPU burst
-			else
+			
+			// See if process finishes within quanta
+			int timeChange;
+			// Process finishes within quanta or right at end
+			if (s[active].burstsLeft[s[active].getCurrentBurst()] <= q)
 			{
-				// See if process finishes within quanta
-				int timeChange;
-				// Process finishes within quanta or right at end
-				if (s[active].burstsLeft[s[active].getCurrentBurst()] <= q)
-				{
-					timeChange = s[active].burstsLeft[s[active].getCurrentBurst()];
-				}
-				//Process doesn't finish in quanta
-				else if (s[active].burstsLeft[s[active].getCurrentBurst()] > q)
-				{
-					timeChange = q;
-				}
-				s[active].burstsLeft[s[active].getCurrentBurst()] -= timeChange;
-				time += timeChange;
-
-				// And as time passes, update those processes waiting in the IO queue
-				while (io.size() > 0 && io.front().burstsLeft[io.front().getCurrentBurst()] <= timeChange)
-				{
-					timeChange -= io.front().burstsLeft[io.front().getCurrentBurst()];
-					string pid = io.front().getId();
-					int loc = getProcessLocWithId(pid, s);
-					s[loc].setIsReady(true);
-					s[loc].setCurrentBurst(s[active].getCurrentBurst()+1);
-					if (s[loc].bursts[s[loc].getCurrentBurst()] == -1)
-					{
-						s[loc].setCurrentBurst(0);
-					}
-					io.pop();
-				}
-				if(io.size() > 0 && timeChange > 0)
-				{
-					io.front().burstsLeft[io.front().getCurrentBurst()] -= timeChange;
-				}
-
-				// Finish active process if it is at its end
-				if (s[active].burstsLeft[s[active].getCurrentBurst()] <= 0)
-				{
-					if (s[active].getCurrentBurst() == s[active].bursts.size()-1)
-					{
-						s[active].end(time);
-					}
-					// Or else continue on to the process's next burst
-					else
-					{
-						s[active].setCurrentBurst(s[active].getCurrentBurst()+1);
-						if (s[active].bursts[s[active].getCurrentBurst()] == -1)
-						{
-							s[active].setCurrentBurst(0);
-						}
-					}
-				}
+				timeChange = s[active].burstsLeft[s[active].getCurrentBurst()];
 			}
-		}
-
-		bool allIoOrNotArrived = true;
-		allDone = true;
-		for (unsigned int i = 0; i < s.size(); i++)
-		{
-			if (s[i].getIsReady() && s[i].getArrivalTime() <= time && !s[i].isDone())
-				allIoOrNotArrived = false;
-			if (!s[i].isDone())
-				allDone = false;
-		}
-
-		if (allIoOrNotArrived && !allDone )
-		{
-			if (activeP != "IDLE")
+			//Process doesn't finish in quanta
+			else if (s[active].burstsLeft[s[active].getCurrentBurst()] > q)
 			{
-				activeP = "IDLE";
-				cout << time << ":IDLE ";
+				timeChange = q;
 			}
-			time++;
-			if (io.size() > 0)
+			s[active].burstsLeft[s[active].getCurrentBurst()] -= timeChange;
+			time += timeChange;
+
+			// And as time passes, update those processes waiting in the IO queue
+			while (io.size() > 0 && io.front().burstsLeft[io.front().getCurrentBurst()] <= timeChange)
 			{
+				timeChange -= io.front().burstsLeft[io.front().getCurrentBurst()];
 				string pid = io.front().getId();
 				int loc = getProcessLocWithId(pid, s);
-				if (io.front().burstsLeft[io.front().getCurrentBurst()] == 1)
+				s[loc].setIsReady(true);
+				s[loc].setCurrentBurst(s[loc].getCurrentBurst()+1);
+				io.pop();
+			}
+			if(io.size() > 0 && timeChange > 0)
+			{
+				io.front().burstsLeft[io.front().getCurrentBurst()] -= timeChange;
+			}
+
+			// Handle processes that complete a burst
+			if(s[active].burstsLeft[s[active].getCurrentBurst()] == 0)
+			{
+				// Finish the process if it is at its end
+				if(s[active].getCurrentBurst() == s.size()-1)
 				{
-					s[loc].setIsReady(true);
-					s[loc].setCurrentBurst(s[loc].getCurrentBurst()+1);
-					if (s[loc].bursts[s[loc].getCurrentBurst()] == -1)
-					{
-						s[loc].setCurrentBurst(0);
-					}
-					io.pop();
+					s[active].end(time);
 				}
+				// Otherwise the next burst is IO; push into IO queue
 				else
 				{
-					io.front().burstsLeft[s[loc].getCurrentBurst()] -= 1;
+					s[active].setIsReady(false);
+					s[active].setCurrentBurst(s[active].getCurrentBurst()+1);
+					io.push(s[active]);
 				}
 			}
 		}
 
+		checkAllIoOrNotArrived(io, s, activeP, time, allDone);
 		// If it is not over, context switch
 		if (!allDone)
 		{
-			// Increment the active only one time
 			active = (active+1) % s.size();
 			while (s[active].getArrivalTime() > time || s[active].isDone() || s[active].getId() == activeP && !s[active].getIsReady())
 				active = (active+1) % s.size();
 
-			if(s[active].getCurrentBurst() % 2 != 1 && !s[active].isDone())
+			if(!s[active].isDone())
 			{
 				if(s[active].getId() != activeP)
 				{
@@ -402,23 +269,7 @@ void rr(Schedule processes, int q, int switches)
 		}
 	}
 
-	cout << time << ":END." << endl;
-
-	bool allFiniteEnded = true;
-	for (unsigned int i = 0; i < s.size(); i++)
-	{
-		if (s[i].getRunTime() != -1 && !s[i].isDone())
-			allFiniteEnded = false;
-	}
-
-	if (numS <= switches && allFiniteEnded)
-	{
-		calcAvgTurnaroundAndResponse(s);
-	}
-	else
-	{
-		cout << "Max number of context switches was reached before all processes ended." << endl;
-	}
+	finish(time, numS, switches, s);
 }
 
 // Run a shortest job first schedule
@@ -429,154 +280,110 @@ void sjf(Schedule processes, int switches)
 	// Sort the processes by time until they arrive
 	Schedule s = sortProcessesByArrivalTime(time, processes);
 
-	// Start the first process
+	// Fast forward time to first arrival
 	string activeP;
+	int active = 0;
 	if(s[0].getArrivalTime() > 0)
 	{
 		activeP = "IDLE";
-		cout << time << ":IDLE";
+		cout << time << ":IDLE ";
 	}
 	time = s[0].getArrivalTime();
-	s[0].start(time);
-	activeP = s[0].getId();
+
+	// Start first process
+	s = sortProcessesByRunTime(s);
+	active = 0;
+	while(!s[active].getIsReady() || s[active].getArrivalTime() > time || s[active].isDone())
+	{
+		active++;
+	}
+	s[active].start(time);
+	activeP = s[active].getId();
 
 	queue<Process> io;
 
-	int active = 0;
 	int numS = 0;
 	bool allDone = false;
 	int t = 0;
 	// Run the processes in sorted order until the last process is finished
 	while (!allDone && numS < switches)
-	{
-		// Sort the process according to next burst size
-		s = sortProcessesByRunTime(s);
-
-		// Clean out a process from IO if it got missed somehow
-		if (io.size() > 0 && io.front().burstsLeft[io.front().getCurrentBurst()] == 0)
+	{			
+		if (!s[active].isDone())
 		{
-			string pid = io.front().getId();
-			int loc = getProcessLocWithId(pid, s);
-			s[loc].setIsReady(true);
-			s[loc].setCurrentBurst(s[active].getCurrentBurst()+1);
-			if (s[loc].bursts[s[loc].getCurrentBurst()] == -1)
+			// First check to see if the process is at the -1 to trigger repeat
+			if (s[active].bursts[s[active].getCurrentBurst()] == -1)
 			{
-				s[loc].setCurrentBurst(0);
+				s[active].setCurrentBurst(0);
+				s[active].burstsLeft = s[active].bursts;
 			}
-			io.pop();
-		}
 
-		if (s[active].getIsReady() && s[active].getArrivalTime() <= time && !s[active].isDone())
-		{
-			// See if CPU or IO burst is scheduled for active process
-			// Add process to queue if it is at IO burst
-			if (s[active].getCurrentBurst() % 2 == 1)
-			{
-				s[active].setIsReady(false);
-				io.push(s[active]);
-			}
-			// Or handle CPU if it is at CPU burst
-			else
-			{
-				// Let this process run for its duration
-				time += s[active].bursts[s[active].getCurrentBurst()];
+			// Let this process run for one length of time
+			// Only one because if a shorter process becomes ready, it will run
+			time++;
+			s[active].burstsLeft[s[active].getCurrentBurst()] -= 1;
 
-				// And as time passes, update those processes waiting in the IO queue
-				int countdown = s[active].bursts[s[active].getCurrentBurst()];
-				while (io.size() > 0 && io.front().burstsLeft[io.front().getCurrentBurst()] <= countdown)
+			// And as time passes, update those processes waiting in the IO queue
+			int countdown = 1;
+			if (io.size() > 0)
+			{
+				io.front().burstsLeft[io.front().getCurrentBurst()] -= countdown;
+				if(io.front().burstsLeft[io.front().getCurrentBurst()] == 0)
 				{
-					countdown -= io.front().burstsLeft[io.front().getCurrentBurst()];
 					string pid = io.front().getId();
 					int loc = getProcessLocWithId(pid, s);
 					s[loc].setIsReady(true);
-					s[loc].setCurrentBurst(s[active].getCurrentBurst()+1);
-					if (s[loc].bursts[s[loc].getCurrentBurst()] == -1)
-					{
-						s[loc].setCurrentBurst(0);
-					}
+					s[loc].setCurrentBurst(s[loc].getCurrentBurst()+1);
 					io.pop();
 				}
-				if(io.size() > 0 && countdown > 0)
-				{
-					io.front().burstsLeft[io.front().getCurrentBurst()] -= countdown;
-				}
+			}
 
-				// Finish active process if it is at its end
-				if (s[active].getCurrentBurst() == s[active].bursts.size()-1)
+			// Check if the process ended after time length of 1
+			if(s[active].burstsLeft[s[active].getCurrentBurst()] == 0)
+			{
+				// Finish the process if it is at its end
+				if(s[active].getCurrentBurst() == s[active].bursts.size()-1)
 				{
 					s[active].end(time);
 				}
-				// Or else continue on to the process's next burst
+				// Otherwise the next burst is IO; push into IO queue
 				else
 				{
+					s[active].setIsReady(false);
 					s[active].setCurrentBurst(s[active].getCurrentBurst()+1);
 					if (s[active].bursts[s[active].getCurrentBurst()] == -1)
 					{
 						s[active].setCurrentBurst(0);
+						s[active].burstsLeft = s[active].bursts;
 					}
+					io.push(s[active]);
 				}
 			}
 		}
 
-		bool allIoOrNotArrived = true;
-		allDone = true;
-		for (unsigned int i = 0; i < s.size(); i++)
-		{
-			if (s[i].getIsReady() && s[i].getArrivalTime() <= time && !s[i].isDone())
-				allIoOrNotArrived = false;
-			if (!s[i].isDone())
-				allDone = false;
-		}
-
-		if (allIoOrNotArrived && !allDone )
-		{
-			if (activeP != "IDLE")
-			{
-				activeP = "IDLE";
-				cout << time << ":IDLE ";
-			}
-			time++;
-			if (io.size() > 0)
-			{
-				string pid = io.front().getId();
-				int loc = getProcessLocWithId(pid, s);
-				if (io.front().burstsLeft[io.front().getCurrentBurst()] == 1)
-				{
-					s[loc].setIsReady(true);
-					s[loc].setCurrentBurst(s[loc].getCurrentBurst()+1);
-					if (s[loc].bursts[s[loc].getCurrentBurst()] == -1)
-					{
-						s[loc].setCurrentBurst(0);
-					}
-					io.pop();
-				}
-				else
-				{
-					io.front().burstsLeft[s[loc].getCurrentBurst()] -= 1;
-				}
-			}
-		}
-
+		checkAllIoOrNotArrived(io, s, activeP, time, allDone);
 		// If it is not over, context switch
 		if (!allDone)
 		{
-			// Increment the active only one time
-			active = (active+1) % s.size();
-			while (s[active].getArrivalTime() > time || s[active].isDone() || s[active].getId() == activeP && !s[active].getIsReady())
+			s = sortProcessesByRunTime(s);
+			active = 0;
+			while (s[active].getArrivalTime() > time || s[active].isDone())
 				active = (active+1) % s.size();
 
-			if(s[active].getCurrentBurst() % 2 != 1 && !s[active].isDone())
+			if(s[active].getIsReady() && s[active].getId() != activeP)
 			{
-				if(s[active].getId() != activeP)
-				{
-					s[active].start(time);
-					numS++;
-					activeP = s[active].getId();
-				}
+				s[active].start(time);
+				numS++;
+				activeP = s[active].getId();
 			}
 		}
 	}
 
+	finish(time, numS, switches, s);
+}
+
+// Helper function to clean up clutter
+void finish(int time, int numS, int switches, Schedule s)
+{
 	cout << time << ":END." << endl;
 
 	bool allFiniteEnded = true;
@@ -596,168 +403,41 @@ void sjf(Schedule processes, int switches)
 	}
 }
 
-
-/*{
-	int time = 0;
-
-	// Sort the processes by time until they arrive
-	Schedule s = sortProcessesByArrivalTime(time, processes);
-
-	int currentTime = s[0].bursts[0];
-	int active = 0;
+// Helper function to check if schedule is stumped
+void checkAllIoOrNotArrived(queue<Process>& io, Schedule& s, string& activeP, int& time, bool& allDone)
+{
+	bool allIoOrNotArrived = true;
+	allDone = true;
 	for (unsigned int i = 0; i < s.size(); i++)
 	{
-		if(s[i].bursts[0] < currentTime && s[i].getArrivalTime() <= s[0].getArrivalTime())
+		if (s[i].getIsReady() && s[i].getArrivalTime() <= time && !s[i].isDone())
+			allIoOrNotArrived = false;
+		if (!s[i].isDone())
+			allDone = false;
+	}
+
+	if (allIoOrNotArrived && !allDone )
+	{
+		if (activeP != "IDLE")
 		{
-			active = i;
-			currentTime = s[i].bursts[0];
+			activeP = "IDLE";
+			cout << time << ":IDLE ";
 		}
-	}
-
-	// Start the first process
-	string activeP;
-	if(s[active].getArrivalTime() > 0)
-	{
-		activeP = "IDLE";
-		cout << time << ":IDLE ";
-	}
-	time = s[active].getArrivalTime();
-	s[active].start(time);
-	activeP = s[active].getId();
-
-	queue<Process> io;
-
-	int numS = 0;
-	bool allDone = false;
-	int t = 0;
-	// Run the processes in sorted order until the last process is finished
-	while (!allDone && numS < switches)
-	{
-		// Process IO queue
+		time++;
 		if (io.size() > 0)
 		{
 			string pid = io.front().getId();
 			int loc = getProcessLocWithId(pid, s);
-			s[loc].setIsReady(true);
-			s[loc].setCurrentBurst(io.front().getCurrentBurst()+1);
-			io.pop();
-		}
-
-		if (s[active].getIsReady() && s[active].getArrivalTime() <= time && !s[active].isDone())
-		{
-			// See if CPU or IO burst for active process
-			if (s[active].bursts[s[active].getCurrentBurst()] == 1)
+			if (io.front().burstsLeft[io.front().getCurrentBurst()] == 1)
 			{
-				s[active].setIsReady(false);
-				io.push(s[active]);
+				s[loc].setIsReady(true);
+				s[loc].setCurrentBurst(s[loc].getCurrentBurst()+1);
+				io.pop();
 			}
 			else
 			{
-				activeP = s[active].getId();
-				// Burst shorter than quanta
-				if (s[active].burstsLeft[s[active].getCurrentBurst()] == 1)
-				{
-					time++;
-					s[active].burstsLeft[s[active].getCurrentBurst()]--;
-					if(s[active].getCurrentBurst() == s[active].bursts.size()-1)
-					{
-						s[active].end(time);
-					}
-					else
-					{
-						s[active].setCurrentBurst(s[active].getCurrentBurst()+1);
-						if (s[active].bursts[s[active].getCurrentBurst()] == -1)
-						{
-							s[active].setCurrentBurst(0);
-						}
-					}
-				}
-				// Burst longer than quanta
-				else if (s[active].burstsLeft[s[active].getCurrentBurst()] > 1)
-				{
-					time++;
-					s[active].burstsLeft[s[active].getCurrentBurst()]--;
-				}
-			}
-		}
-
-		bool allIo = true;
-		bool noneArrived = true;
-		allDone = true;
-		for (unsigned int i = 0; i < s.size(); i++)
-		{
-			if (s[i].getIsReady())
-				allIo = false;
-			if (s[i].getArrivalTime() <= time)
-				noneArrived = false;
-			if (!s[i].isDone())
-				allDone = false;
-		}
-
-		if (allIo || noneArrived)
-		{
-			time++;
-			if (activeP != "IDLE")
-			{
-				activeP = "IDLE";
-				cout << time << ":IDLE " << endl;
-			}
-		}
-
-		// If it is not over, context switch
-		if (!allDone)
-		{
-			int currentLow;
-			int tempActive = -1;
-			if (s[active].burstsLeft[s[active].getCurrentBurst()] == 0 ||
-				s[active].bursts[s[active].getCurrentBurst()] == 1)
-			{
-				currentLow = 1000;
-				tempActive = active;
-			}
-			else
-				currentLow = s[active].burstsLeft[s[active].getCurrentBurst()];
-			for (unsigned int i = 0; i < s.size(); i++)
-			{
-				if(tempActive != -1)
-				{
-					if(i != tempActive)
-					{
-						if(s[i].burstsLeft[s[i].getCurrentBurst()] < currentLow && s[i].getArrivalTime() <= time && !s[i].isDone() )
-						{
-							active = i;
-							break;
-						}
-					}
-				}
-				else
-				{
-					if(s[i].burstsLeft[s[i].getCurrentBurst()] < currentLow && s[i].getArrivalTime() <= time && !s[i].isDone() )
-					{
-						active = i;
-						break;
-					}
-				}
-			}
-			if (s[active].getId() != activeP)
-			{
-				if (s[active].bursts[s[active].getCurrentBurst()] != 1)
-				{
-					s[active].start(time);
-					numS++;
-				}
+				io.front().burstsLeft[s[loc].getCurrentBurst()] -= 1;
 			}
 		}
 	}
-
-	cout << time << ":END." << endl;
-
-	if (numS <= switches && allDone)
-	{
-		calcAvgTurnaroundAndResponse(s);
-	}
-	else
-	{
-		cout << "Max number of context switches was reached before all processes ended." << endl;
-	}
-}*/
+}

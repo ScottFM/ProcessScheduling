@@ -230,21 +230,28 @@ Schedule sortProcessesByRunTime(Schedule processes)
 	{
 		unsigned int idx = 0;
 		bool stop = false;
-		if (processes[i].burstsLeft[processes[i].getCurrentBurst()] >= 0)
+		// Find next CPU burst
+		int burst = processes[i].getCurrentBurst();
+		if (processes[i].getCurrentBurst() % 2 == 1)
 		{
-			while (idx < sorted.size() && stop != true)
+			burst++;
+			if (processes[i].bursts[burst] == -1)
 			{
-				if (processes[i].burstsLeft[processes[i].getCurrentBurst()] >= sorted[idx].bursts[sorted[idx].getCurrentBurst()])
-				{
-					idx++;
-				}
-				else
-				{
-					stop = true;
-				}
+				burst = 0;
 			}
-			sorted.insert(sorted.begin()+idx, processes[i]);
 		}
+		while (idx < sorted.size() && stop != true)
+		{
+			if (processes[i].burstsLeft[burst] >= sorted[idx].bursts[sorted[idx].getCurrentBurst()])
+			{
+				idx++;
+			}
+			else
+			{
+				stop = true;
+			}
+		}
+		sorted.insert(sorted.begin()+idx, processes[i]);
 	}
 
 	return sorted;
