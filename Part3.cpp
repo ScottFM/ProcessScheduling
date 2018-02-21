@@ -35,6 +35,8 @@ void sjf(Schedule processes, int switches);
 void finish(int time, int num, int switches, Schedule s);
 // Helper function to check if schedule is stumped
 void checkAllIoOrNotArrived(queue<Process>& io, Schedule& s, string& activeP, int& time, bool& allDone);
+// Helper function when nothing can run
+void stuck(queue<Process>& io, Schedule& s, string& activeP, int& time);
 
 int main()
 {
@@ -52,15 +54,15 @@ int main()
 	//quanta = 2;
 	//switches = 20;
 
-	//cout << endl << endl;
-	//cout << "//////////////////////// FCFS ////////////////////////" << endl;
-	//// Simulate first come, first served
-	//fcfs(processes, switches);
+	cout << endl << endl;
+	cout << "//////////////////////// FCFS ////////////////////////" << endl;
+	// Simulate first come, first served
+	fcfs(processes, switches);
 
-	//cout << endl << endl;
-	//cout << "//////////////////////// RR /////////////////////////" << endl;
-	//// Simulate round robin
-	//rr(processes, quanta, switches);
+	cout << endl << endl;
+	cout << "//////////////////////// RR /////////////////////////" << endl;
+	// Simulate round robin
+	rr(processes, quanta, switches);
 
 	cout << endl << endl;
 	cout << "//////////////////////// SJF ////////////////////////" << endl;
@@ -80,7 +82,7 @@ void fcfs(Schedule processes, int switches)
 
 	// Start the first process
 	string activeP;
-	if(s[0].getArrivalTime() > 0)
+	if (s[0].getArrivalTime() > 0)
 	{
 		activeP = "IDLE";
 		cout << time << ":IDLE ";
@@ -119,16 +121,25 @@ void fcfs(Schedule processes, int switches)
 				string pid = io.front().getId();
 				int loc = getProcessLocWithId(pid, s);
 				s[loc].setIsReady(true);
-				s[loc].setCurrentBurst(s[loc].getCurrentBurst()+1);
+				if (s[loc].bursts[s[loc].getCurrentBurst()] == -1)
+				{
+					s[loc].setCurrentBurst(0);
+					s[loc].burstsLeft = s[active].bursts;
+				}
+				else
+				{
+					s[loc].setCurrentBurst(s[loc].getCurrentBurst()+1);
+				}
+
 				io.pop();
 			}
-			if(io.size() > 0 && countdown > 0)
+			if (io.size() > 0 && countdown > 0)
 			{
 				io.front().burstsLeft[io.front().getCurrentBurst()] -= countdown;
 			}
 
 			// Finish the process if it is at its end
-			if(s[active].getCurrentBurst() == s.size()-1)
+			if (s[active].getCurrentBurst() == s[active].bursts.size()-1)
 			{
 				s[active].end(time);
 			}
@@ -136,7 +147,15 @@ void fcfs(Schedule processes, int switches)
 			else
 			{
 				s[active].setIsReady(false);
-				s[active].setCurrentBurst(s[active].getCurrentBurst()+1);
+				if (s[active].bursts[s[active].getCurrentBurst()] == -1)
+				{
+					s[active].setCurrentBurst(0);
+					s[active].burstsLeft = s[active].bursts;
+				}
+				else
+				{
+					s[active].setCurrentBurst(s[active].getCurrentBurst()+1);
+				}
 				io.push(s[active]);
 			}
 		}
@@ -146,12 +165,12 @@ void fcfs(Schedule processes, int switches)
 		if (!allDone)
 		{
 			active = (active+1) % s.size();
-			while (s[active].getArrivalTime() > time || s[active].isDone() || s[active].getId() == activeP && !s[active].getIsReady())
+			while (s[active].getArrivalTime() > time || s[active].isDone())
 				active = (active+1) % s.size();
 
-			if(!s[active].isDone())
+			if (s[active].getIsReady())
 			{
-				if(s[active].getId() != activeP)
+				if (s[active].getId() != activeP)
 				{
 					s[active].start(time);
 					numS++;
@@ -174,7 +193,7 @@ void rr(Schedule processes, int q, int switches)
 
 	// Start the first process
 	string activeP;
-	if(s[0].getArrivalTime() > 0)
+	if (s[0].getArrivalTime() > 0)
 	{
 		activeP = "IDLE";
 		cout << time << ":IDLE ";
@@ -226,16 +245,16 @@ void rr(Schedule processes, int q, int switches)
 				s[loc].setCurrentBurst(s[loc].getCurrentBurst()+1);
 				io.pop();
 			}
-			if(io.size() > 0 && timeChange > 0)
+			if (io.size() > 0 && timeChange > 0)
 			{
 				io.front().burstsLeft[io.front().getCurrentBurst()] -= timeChange;
 			}
 
 			// Handle processes that complete a burst
-			if(s[active].burstsLeft[s[active].getCurrentBurst()] == 0)
+			if (s[active].burstsLeft[s[active].getCurrentBurst()] == 0)
 			{
 				// Finish the process if it is at its end
-				if(s[active].getCurrentBurst() == s.size()-1)
+				if (s[active].getCurrentBurst() == s.size()-1)
 				{
 					s[active].end(time);
 				}
@@ -254,12 +273,12 @@ void rr(Schedule processes, int q, int switches)
 		if (!allDone)
 		{
 			active = (active+1) % s.size();
-			while (s[active].getArrivalTime() > time || s[active].isDone() || s[active].getId() == activeP && !s[active].getIsReady())
+			while (s[active].getArrivalTime() > time || s[active].isDone())
 				active = (active+1) % s.size();
 
-			if(!s[active].isDone())
+			if (s[active].getIsReady())
 			{
-				if(s[active].getId() != activeP)
+				if (s[active].getId() != activeP)
 				{
 					s[active].start(time);
 					numS++;
@@ -283,7 +302,7 @@ void sjf(Schedule processes, int switches)
 	// Fast forward time to first arrival
 	string activeP;
 	int active = 0;
-	if(s[0].getArrivalTime() > 0)
+	if (s[0].getArrivalTime() > 0)
 	{
 		activeP = "IDLE";
 		cout << time << ":IDLE ";
@@ -327,7 +346,7 @@ void sjf(Schedule processes, int switches)
 			if (io.size() > 0)
 			{
 				io.front().burstsLeft[io.front().getCurrentBurst()] -= countdown;
-				if(io.front().burstsLeft[io.front().getCurrentBurst()] == 0)
+				if (io.front().burstsLeft[io.front().getCurrentBurst()] == 0)
 				{
 					string pid = io.front().getId();
 					int loc = getProcessLocWithId(pid, s);
@@ -338,10 +357,10 @@ void sjf(Schedule processes, int switches)
 			}
 
 			// Check if the process ended after time length of 1
-			if(s[active].burstsLeft[s[active].getCurrentBurst()] == 0)
+			if (s[active].burstsLeft[s[active].getCurrentBurst()] == 0)
 			{
 				// Finish the process if it is at its end
-				if(s[active].getCurrentBurst() == s[active].bursts.size()-1)
+				if (s[active].getCurrentBurst() == s[active].bursts.size()-1)
 				{
 					s[active].end(time);
 				}
@@ -361,15 +380,36 @@ void sjf(Schedule processes, int switches)
 		}
 
 		checkAllIoOrNotArrived(io, s, activeP, time, allDone);
+
 		// If it is not over, context switch
 		if (!allDone)
 		{
 			s = sortProcessesByRunTime(s);
-			active = 0;
-			while (s[active].getArrivalTime() > time || s[active].isDone())
+			bool allNotReadyOrDone = true;
+			for (unsigned int i = 0; i < s.size(); i++)
+			{
+				if (s[i].getIsReady() && !s[i].isDone())
+					allNotReadyOrDone = false;
+			}
+			
+			// Block like a son of a bitch if things are stuck
+			active = (active+1) % s.size();
+			while (allNotReadyOrDone)
+			{
+				stuck(io, s, activeP, time);
+				for (unsigned int i = 0; i < s.size(); i++)
+				{
+					if (s[i].getIsReady() && !s[i].isDone())
+						allNotReadyOrDone = false;
+				}
+			}
+
+			// Get next process to run
+			while (s[active].isDone() || !s[active].getIsReady() || s[active].getArrivalTime() > time)
 				active = (active+1) % s.size();
 
-			if(s[active].getIsReady() && s[active].getId() != activeP)
+
+			if (s[active].getArrivalTime() <= time && s[active].getId() != activeP)
 			{
 				s[active].start(time);
 				numS++;
@@ -418,26 +458,32 @@ void checkAllIoOrNotArrived(queue<Process>& io, Schedule& s, string& activeP, in
 
 	if (allIoOrNotArrived && !allDone )
 	{
-		if (activeP != "IDLE")
+		stuck(io, s, activeP, time);
+	}
+}
+
+// Helper function when nothing can run
+void stuck(queue<Process>& io, Schedule& s, string& activeP, int& time)
+{
+	if (activeP != "IDLE")
+	{
+		activeP = "IDLE";
+		cout << time << ":IDLE ";
+	}
+	time++;
+	if (io.size() > 0)
+	{
+		string pid = io.front().getId();
+		int loc = getProcessLocWithId(pid, s);
+		if (io.front().burstsLeft[io.front().getCurrentBurst()] == 1)
 		{
-			activeP = "IDLE";
-			cout << time << ":IDLE ";
+			s[loc].setIsReady(true);
+			s[loc].setCurrentBurst(s[loc].getCurrentBurst()+1);
+			io.pop();
 		}
-		time++;
-		if (io.size() > 0)
+		else
 		{
-			string pid = io.front().getId();
-			int loc = getProcessLocWithId(pid, s);
-			if (io.front().burstsLeft[io.front().getCurrentBurst()] == 1)
-			{
-				s[loc].setIsReady(true);
-				s[loc].setCurrentBurst(s[loc].getCurrentBurst()+1);
-				io.pop();
-			}
-			else
-			{
-				io.front().burstsLeft[s[loc].getCurrentBurst()] -= 1;
-			}
+			io.front().burstsLeft[s[loc].getCurrentBurst()] -= 1;
 		}
 	}
 }

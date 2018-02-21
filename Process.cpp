@@ -242,9 +242,20 @@ Schedule sortProcessesByRunTime(Schedule processes)
 		}
 		while (idx < sorted.size() && stop != true)
 		{
-			if (processes[i].burstsLeft[burst] >= sorted[idx].bursts[sorted[idx].getCurrentBurst()])
+			if (processes[i].burstsLeft[burst] > sorted[idx].bursts[sorted[idx].getCurrentBurst()])
 			{
 				idx++;
+			}
+			else if (processes[i].burstsLeft[burst] == sorted[idx].bursts[sorted[idx].getCurrentBurst()])
+			{
+				if (processes[i].getArrivalTime() > sorted[idx].getArrivalTime())
+				{
+					idx++;
+				}
+				else
+				{
+					stop = true;
+				}
 			}
 			else
 			{
