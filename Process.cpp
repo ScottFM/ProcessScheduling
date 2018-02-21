@@ -72,7 +72,7 @@ void Process::start(int time)
 	}
 	if (response == -1)
 		response = time - arrivalTime;
-	cout << time << ":" << getId() << " ";
+//	cout << time << ":" << getId() << " ";
 }
 int Process::getStartTime()
 {
@@ -314,8 +314,9 @@ void calcAvgTurnaroundAndResponse(Schedule s)
 	avgTurnaround /= s.size();
 	avgResponseTime /= s.size();
 
-	cout << "Average turnaround time for finite processes was: " << avgTurnaround << endl;
-	cout << "Average response time was: " << avgResponseTime << endl;
+	cout << " turnaround: " << avgTurnaround << ", response time: " << avgResponseTime << endl;
+	//cout << "Average turnaround time for finite processes was: " << avgTurnaround << endl;
+	//cout << "Average response time was: " << avgResponseTime << endl;
 }
 
 // Helper function to modify object in queue
@@ -325,5 +326,79 @@ int getProcessLocWithId(string id, Schedule s)
 	{
 		if (s[i].getId() == id)
 			return i;
+	}
+}
+
+// Helper function to clean up clutter
+void finish(int time, int numS, int switches, Schedule s)
+{
+//	cout << time << ":END." << endl;
+
+	bool allFiniteEnded = true;
+	for (unsigned int i = 0; i < s.size(); i++)
+	{
+		if (s[i].getRunTime() != -1 && !s[i].isDone())
+			allFiniteEnded = false;
+	}
+
+	if (numS <= switches && allFiniteEnded)
+	{
+		calcAvgTurnaroundAndResponse(s);
+	}
+	else
+	{
+		cout << "Max number of context switches was reached before all processes ended." << endl;
+	}
+}
+
+// Helper function to check if schedule is stumped
+void checkAllIoOrNotArrived(queue<Process>& io, Schedule& s, string& activeP, int& time, bool& allDone)
+{
+	bool allIoOrNotArrived = true;
+	allDone = true;
+	for (unsigned int i = 0; i < s.size(); i++)
+	{
+		if (s[i].getIsReady() && s[i].getArrivalTime() <= time && !s[i].isDone())
+			allIoOrNotArrived = false;
+		if (!s[i].isDone())
+			allDone = false;
+	}
+
+	while (allIoOrNotArrived && !allDone )
+	{
+		stuck(io, s, activeP, time);
+		for (unsigned int i = 0; i < s.size(); i++)
+		{
+			if (s[i].getIsReady() && s[i].getArrivalTime() <= time && !s[i].isDone())
+				allIoOrNotArrived = false;
+			if (!s[i].isDone())
+				allDone = false;
+		}
+	}
+}
+
+// Helper function when nothing can run
+void stuck(queue<Process>& io, Schedule& s, string& activeP, int& time)
+{
+	if (activeP != "IDLE")
+	{
+		activeP = "IDLE";
+//		cout << time << ":IDLE ";
+	}
+	time++;
+	if (io.size() > 0)
+	{
+		string pid = io.front().getId();
+		int loc = getProcessLocWithId(pid, s);
+		if (io.front().burstsLeft[io.front().getCurrentBurst()] == 1)
+		{
+			s[loc].setIsReady(true);
+			s[loc].setCurrentBurst(s[loc].getCurrentBurst()+1);
+			io.pop();
+		}
+		else
+		{
+			io.front().burstsLeft[s[loc].getCurrentBurst()] -= 1;
+		}
 	}
 }

@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <algorithm>	// find element in vector
+#include <queue>
 
 using namespace std;
 
@@ -87,5 +88,15 @@ void calcAvgTurnaroundAndResponse(Schedule s);
 
 // Helper function to modify object in queue
 int getProcessLocWithId(string id, Schedule s);
+
+// Helper function to clean up clutter
+void finish(int time, int numS, int switches, Schedule s);
+
+// Helper function to check if schedule is stumped
+void checkAllIoOrNotArrived(queue<Process>& io, Schedule& s, string& activeP, int& time, bool& allDone);
+
+// Helper function when nothing can run
+void stuck(queue<Process>& io, Schedule& s, string& activeP, int& time);
+
 
 #endif // PROCESS_H
