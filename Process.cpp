@@ -25,6 +25,7 @@ Process::Process(string id, int arrTime, vector<int> newBursts)
 	setCurrentBurst(0);
 	setIsReady(true);
 	setBurstAvg(0);
+	setTickets(10);
 }
 
 string Process::getId()
@@ -72,7 +73,7 @@ void Process::start(int time)
 	}
 	if (response == -1)
 		response = time - arrivalTime;
-//	cout << time << ":" << getId() << " ";
+	cout << time << ":" << getId() << " ";
 }
 int Process::getStartTime()
 {
@@ -314,9 +315,9 @@ void calcAvgTurnaroundAndResponse(Schedule s)
 	avgTurnaround /= s.size();
 	avgResponseTime /= s.size();
 
-	cout << " turnaround: " << avgTurnaround << ", response time: " << avgResponseTime << endl;
-	//cout << "Average turnaround time for finite processes was: " << avgTurnaround << endl;
-	//cout << "Average response time was: " << avgResponseTime << endl;
+//	cout << " turnaround: " << avgTurnaround << ", response time: " << avgResponseTime << endl;
+	cout << "Average turnaround time for finite processes was: " << avgTurnaround << endl;
+	cout << "Average response time was: " << avgResponseTime << endl;
 }
 
 // Helper function to modify object in queue
@@ -332,7 +333,7 @@ int getProcessLocWithId(string id, Schedule s)
 // Helper function to clean up clutter
 void finish(int time, int numS, int switches, Schedule s)
 {
-//	cout << time << ":END." << endl;
+	cout << time << ":END." << endl;
 
 	bool allFiniteEnded = true;
 	for (unsigned int i = 0; i < s.size(); i++)
@@ -383,7 +384,7 @@ void stuck(queue<Process>& io, Schedule& s, string& activeP, int& time)
 	if (activeP != "IDLE")
 	{
 		activeP = "IDLE";
-//		cout << time << ":IDLE ";
+		cout << time << ":IDLE ";
 	}
 	time++;
 	if (io.size() > 0)

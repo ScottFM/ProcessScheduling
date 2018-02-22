@@ -15,11 +15,10 @@ using namespace std;
 typedef vector<Process> Schedule;
 
 // This file assumes:
-// 1. Processes all arrive at time t=0
-// 2. Processes can have alternating CPU and IO bursts
-// 3. There is a max number of context switches.
-// 4. A CPU burst will come first and last. An IO burst will never start or finish the sequence
-// 5. There will never be a CPU sequence of only -1.
+// 1. Processes can have alternating CPU and IO bursts
+// 2. There is a max number of context switches.
+// 3. A CPU burst will come first and last. An IO burst will never start or finish the sequence
+// 4. There will never be a CPU sequence of only -1.
 
 // Simulate shorted remaining time first
 void srtf(Schedule processes, int switches, float alpha, float est);
@@ -109,7 +108,6 @@ void srtf(Schedule processes, int switches, float alpha, float est)
 	queue<Process> io;
 	int numS = 0;
 	bool allDone = false;
-	int t = 0;
 	// Run the processes in sorted order until the last process is finished
 	while (!allDone && numS < switches)
 	{
@@ -181,7 +179,7 @@ void srtf(Schedule processes, int switches, float alpha, float est)
 			bool allNotReadyOrDone = true;
 			for (unsigned int i = 0; i < s.size(); i++)
 			{
-				if (s[i].getIsReady() && !s[i].isDone() && s[active].getArrivalTime() <= time)
+				if (s[i].getIsReady() && !s[i].isDone() && s[i].getArrivalTime() <= time)
 					allNotReadyOrDone = false;
 			}
 			
@@ -196,11 +194,6 @@ void srtf(Schedule processes, int switches, float alpha, float est)
 						allNotReadyOrDone = false;
 				}
 			}
-
-			//// Get next process to run
-			//while (s[active].isDone() || !s[active].getIsReady() || s[active].getArrivalTime() > time)
-			//	active = (active+1) % s.size();
-
 
 			if (s[active].getArrivalTime() <= time && s[active].getId() != activeP)
 			{

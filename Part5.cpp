@@ -18,150 +18,260 @@ using namespace std;
 typedef vector<Process> Schedule;
 
 // This file assumes:
-// 1. Processes all arrive at time t=0
-// 2. Processes can have alternating CPU and IO bursts
-// 3. There is a max number of context switches.
+// 1. Processes can have alternating CPU and IO bursts
+// 2. There is a max number of context switches.
+// 3. A CPU burst will come first and last. An IO burst will never start or finish the sequence
 // 4. There will never be a CPU sequence of only -1.
 
 // Simulate shorted remaining time first with a lottery
-void lottery(Schedule processes, int switches);
+void lottery(Schedule processes, int switches, float alpha, float est);
+// Helper function to get the active process after drawing
+int getActive(int draw, Schedule s);
 
 int main()
 {
 	ifstream in;
-	in.open("processes4.txt");
+	in.open("processes3.txt");
 
 	// Prepare a vector of processes
 	Schedule processes;
 	readProcessesFromFile(in, processes);
 
 	int switches;
+	float alpha = 0;
+	float est = 0;
 	cout << "Enter the max number of context switches: "; cin >> switches;
-//	switches = 20;
+    cout << "Enter a value for alpha between 0 and 1: "; cin >> alpha;
+	cout << "Enter a guess for initial process run time: "; cin >> est;
+	//switches = 30;
+	//alpha = 0.5;
+	//est = 5;
 	srand((unsigned) time(NULL));
 
-	cout << endl << endl;
-	cout << "//////////////////////// LOTTERY ////////////////////////" << endl;
-	// Simulate shortest remaining time first with a lottery
-	lottery(processes, switches);
+	for (int i = 0; i < 100; i++)
+	{
+		cout << endl << endl;
+		cout << "//////////////////////// LOTTERY ////////////////////////" << endl;
+		// Simulate shortest remaining time first with a lottery
+		lottery(processes, switches, alpha, est);
+	}
 
 	return 0;
 }
 
 // Simulate shorted remaining time first with a lottery
-void lottery(Schedule processes, int switches)
+void lottery(Schedule processes, int switches, float alpha, float est)
 {
 	int time = 0;
-	int est = 3;
-	float alpha = 0.5;
-	int totalTix = 0;
 
-	// Sort the processes by estimate
-	// Don't need to sort by arrival time due to assumption 1
-	Schedule s = sortProcessesByAvg(processes);
+	// Sort the processes by time until they arrive
+	Schedule s = sortProcessesByArrivalTime(time, processes);
+
+	// Fast forward time to first arrival
+	string activeP;
+	if (s[0].getArrivalTime() > 0)
+	{
+		activeP = "IDLE";
+		cout << time << ":IDLE ";
+	}
+	time = s[0].getArrivalTime();
 
 	// Set initial estimate for each process
+	int totalTix = 0;
 	for (unsigned int i = 0; i < s.size(); i++)
 	{
 		s[i].setBurstAvg(est);
+		totalTix += s[i].getTickets();
 	}
-
-	string activeP;
+	// Do the first random draw
+	int draw = (rand() % totalTix) + 1;
 	int active = 0;
+	int currentTotal = 0;
+	active = getActive(draw, s);
+
+//	cout << "initial draw = " << draw << endl;
+
+	// Start first process
+	while(!s[active].getIsReady() || s[active].getArrivalTime() > time || s[active].isDone())
+	{
+		draw = (draw+1) % s.size();
+		active = getActive(draw, s);
+	}
+	s[active].start(time);
+	activeP = s[active].getId();
+
+	queue<Process> io;
 	int numS = 0;
 	bool allDone = false;
-	int draw = 0;
 
-	// Run the processes in sorted order until the last process is finished
+	// Run the processes according to lottery
 	while (!allDone && numS < switches)
 	{
-		// Redistribute the tickets
-		s = sortProcessesByAvg(s);
-		int lowestEst = s[0].getBurstAvg();
-		int highestEst = s[s.size()-1].getBurstAvg();
-		totalTix = 0;
-		for (unsigned int i = 0; i < s.size(); i++)
+		if (!s[active].isDone())
 		{
-			int avg = s[i].getBurstAvg();
-			int num;
-
-			// Highest priority
-			if(avg == lowestEst)
-				num = 10;
-			// Lowest priority
-			else if(avg == highestEst)
-				num = 1;
-			// Intermediate priority
-			else
-				num = 5;
-
-			s[i].setTickets(num);
-			totalTix += num;
-		}
-
-		// Pull a winner from the tickets
-		draw = (rand() % totalTix) + 1;
-		int currentTotal = 0;
-		for (unsigned int i = 0; i < s.size(); i++)
-		{
-			if(!s[i].isDone())
-			{
-				if(draw > currentTotal && draw <= currentTotal + s[i].getTickets())
-				{
-//					cout << "Process " << s[i].getId() << " was drawn with a chance of " << s[i].getTickets() << "/" << totalTix << endl;
-					active = i;
-					break;
-				}
-				currentTotal += s[i].getTickets();
-			}
-		}
-
-		if(s[active].getId() != activeP)
-		{
-			s[active].start(time);
-			activeP = s[active].getId();
-			numS++;
-		}
-
-		activeP = s[active].getId();
-
-		// Let process run
-		time += s[active].bursts[s[active].getCurrentBurst()];
-
-		// Calculate the new estimate
-		float nextEst = (alpha*s[active].bursts[s[active].getCurrentBurst()]) + ((1-alpha)*s[active].getBurstAvg());
-		s[active].setBurstAvg(ceil(nextEst));
-//		cout << "New estimate for " << s[active].getId() << " = " << ceil(nextEst) << endl;
-		if(s[active].getCurrentBurst() == s[active].bursts.size()-1)
-		{
-			s[active].end(time);
-		}
-		else
-		{
-			s[active].setCurrentBurst(s[active].getCurrentBurst()+1);
+			// First check to see if the process is at the -1 to trigger repeat
 			if (s[active].bursts[s[active].getCurrentBurst()] == -1)
 			{
 				s[active].setCurrentBurst(0);
+				s[active].burstsLeft = s[active].bursts;
+			}
+
+			// Let this process run for one length of time
+			// Only one because if a shorter process becomes ready, it will run
+			time++;
+			s[active].burstsLeft[s[active].getCurrentBurst()] -= 1;
+
+			// And as time passes, update those processes waiting in the IO queue
+			int countdown = 1;
+			if (io.size() > 0)
+			{
+				io.front().burstsLeft[io.front().getCurrentBurst()] -= countdown;
+				if (io.front().burstsLeft[io.front().getCurrentBurst()] == 0)
+				{
+					string pid = io.front().getId();
+					int loc = getProcessLocWithId(pid, s);
+					s[loc].setIsReady(true);
+					s[loc].setCurrentBurst(s[loc].getCurrentBurst()+1);
+					io.pop();
+				}
+			}
+
+			// Check if the process ended after time length of 1
+			if (s[active].burstsLeft[s[active].getCurrentBurst()] == 0)
+			{
+				// Calculate the new estimate
+				float a = alpha*(float)s[active].bursts[s[active].getCurrentBurst()];
+				float b = (1-alpha)*(float)s[active].getBurstAvg();
+				float nextEst = (a + b);
+				s[active].setBurstAvg(ceil(nextEst));
+//				cout << "New estimate for " << s[active].getId() << " = " << s[active].getBurstAvg() << endl;
+
+				// Finish the process if it is at its end
+				if (s[active].getCurrentBurst() == s[active].bursts.size()-1)
+				{
+					s[active].end(time);
+				}
+				// Otherwise the next burst is IO; push into IO queue
+				else
+				{
+					s[active].setIsReady(false);
+					s[active].setCurrentBurst(s[active].getCurrentBurst()+1);
+					if (s[active].bursts[s[active].getCurrentBurst()] == -1)
+					{
+						s[active].setCurrentBurst(0);
+						s[active].burstsLeft = s[active].bursts;
+					}
+					io.push(s[active]);
+				}
 			}
 		}
 
-		allDone = true;
-		// See if the schedule is done now
-		for (unsigned int i = 0; i < s.size(); i++)
+		checkAllIoOrNotArrived(io, s, activeP, time, allDone);
+
+		// If it is not over, context switch
+		if (!allDone)
 		{
-			if (!s[i].isDone())
-				allDone = false;
+			s = sortProcessesByAvg(s);
+
+			// Calculate new ticket distribution
+			int smallestAvg = 0;
+			int largestAvg = 100;
+			for (unsigned int i = 0; i < s.size(); i++)
+			{
+				if (!s[i].isDone())
+				{
+					smallestAvg = s[i].getBurstAvg();
+					break;
+				}
+			}
+			for (unsigned int i = s.size()-1; i >= 0; i--)
+			{
+				if (!s[i].isDone())
+				{
+					largestAvg = s[i].getBurstAvg();
+					break;
+				}
+			}
+			totalTix = 0;
+			for (unsigned int i = 0; i < s.size(); i++)
+			{
+				if (!s[i].isDone())
+				{
+					int avg = s[i].getBurstAvg();
+					int num;
+					if (s[i].getBurstAvg() == smallestAvg)
+					{
+						num = 10;
+					}
+					else if (s[i].getBurstAvg() == largestAvg)
+					{
+						num = 4;
+					}
+					else
+					{
+						num = 7;
+					}
+					s[i].setTickets(num);
+					totalTix += num;
+				}
+			}
+
+			bool allNotReadyOrDone = true;
+			for (unsigned int i = 0; i < s.size(); i++)
+			{
+				if (s[i].getIsReady() && !s[i].isDone() && s[i].getArrivalTime() <= time)
+					allNotReadyOrDone = false;
+			}
+			
+			// Block like a son of a bitch if things are stuck
+			draw = (rand() % totalTix) + 1;
+			active = getActive(draw, s);
+			while (s[active].isDone())
+			{
+				draw = (rand() % totalTix) + 1;
+				active = getActive(draw, s);
+			}
+			while (allNotReadyOrDone)
+			{
+				stuck(io, s, activeP, time);
+				for (unsigned int i = 0; i < s.size(); i++)
+				{
+					if (s[i].getIsReady() && !s[i].isDone() && s[i].getArrivalTime() <= time)
+						allNotReadyOrDone = false;
+				}
+			}
+
+			// Let process start or resume if it can
+			if (s[active].getArrivalTime() <= time && s[active].getId() != activeP)
+			{
+				s[active].start(time);
+				numS++;
+				activeP = s[active].getId();
+			}
 		}
 	}
 
-	cout << "TIME " << time << ": END." << endl;
+	finish(time, numS, switches, s);
+}
 
-	if (numS <= switches && allDone)
+int getActive(int draw, Schedule s)
+{
+	int currentTotal = 0;
+	int active = 0;
+	for (unsigned int i = 0; i < s.size(); i++)
 	{
-		calcAvgTurnaroundAndResponse(s);
+		if (!s[i].isDone())
+		{
+			if(draw > currentTotal && draw <= currentTotal + s[i].getTickets())
+			{
+				active = i;
+				break;
+			}
+			else
+			{
+				currentTotal += s[i].getTickets();
+			}
+		}
 	}
-	else
-	{
-		cout << "Max number of context switches was reached before all processes ended." << endl;
-	}
+	return active;
 }
