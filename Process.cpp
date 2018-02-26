@@ -25,7 +25,7 @@ Process::Process(string id, int arrTime, vector<int> newBursts)
 	setCurrentBurst(0);
 	setIsReady(true);
 	setBurstAvg(0);
-	setTickets(10);
+	setPriority(1);
 }
 
 string Process::getId()
@@ -79,6 +79,10 @@ int Process::getStartTime()
 {
 	return startTime;
 }
+void Process::setStartTime(int t)
+{
+	startTime = t;
+}
 void Process::end(int time)
 {
 	done = true;
@@ -109,6 +113,10 @@ int Process::getResponse()
 {
 	return response;
 }
+void Process::setResponse(int t)
+{
+	response = t;
+}
 bool Process::getIsReady()
 {
 	return isReady;
@@ -133,13 +141,13 @@ void Process::setBurstAvg(int avg)
 {
 	burstAvg = avg;
 }
-int Process::getTickets()
+int Process::getPriority()
 {
-	return tickets;
+	return priority;
 }
-void Process::setTickets(int t)
+void Process::setPriority(int t)
 {
-	tickets = t;
+	priority = t;
 }
 /////////////////// END PROCESS CLASS ////////////////////
 

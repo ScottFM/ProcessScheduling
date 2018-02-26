@@ -30,18 +30,20 @@ public:
 	void setIsDone(bool isDone);
 	void start(int time);
 	int getStartTime();
+	void setStartTime(int t);
 	void end(int time);
 	int getTurnaround();
 	int getRunTime();
 	int getResponse();
+	void setResponse(int t);
 	bool getIsReady();
 	void setIsReady(bool isReady);
 	int getCurrentBurst();
 	void setCurrentBurst(int b);
 	int getBurstAvg();
 	void setBurstAvg(int avg);
-	int getTickets();
-	void setTickets(int t);
+	int getPriority();
+	void setPriority(int t);
 	
 	vector<int> bursts;
 	vector<int> burstsLeft;
@@ -57,7 +59,7 @@ private:
 	bool isReady;
 	int currentBurst;
 	int burstAvg;
-	int tickets;
+	int priority;
 };
 /////////////////// END PROCESS CLASS ////////////////////
 
@@ -97,6 +99,5 @@ void checkAllIoOrNotArrived(queue<Process>& io, Schedule& s, string& activeP, in
 
 // Helper function when nothing can run
 void stuck(queue<Process>& io, Schedule& s, string& activeP, int& time);
-
 
 #endif // PROCESS_H

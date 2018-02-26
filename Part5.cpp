@@ -81,7 +81,8 @@ void lottery(Schedule processes, int switches, float alpha, float est)
 	for (unsigned int i = 0; i < s.size(); i++)
 	{
 		s[i].setBurstAvg(est);
-		totalTix += s[i].getTickets();
+		s[i].setPriority(10);
+		totalTix += 10;
 	}
 	// Do the first random draw
 	int draw = (rand() % totalTix) + 1;
@@ -211,7 +212,7 @@ void lottery(Schedule processes, int switches, float alpha, float est)
 					{
 						num = 7;
 					}
-					s[i].setTickets(num);
+					s[i].setPriority(num);
 					totalTix += num;
 				}
 			}
@@ -262,14 +263,14 @@ int getActive(int draw, Schedule s)
 	{
 		if (!s[i].isDone())
 		{
-			if(draw > currentTotal && draw <= currentTotal + s[i].getTickets())
+			if(draw > currentTotal && draw <= currentTotal + s[i].getPriority())
 			{
 				active = i;
 				break;
 			}
 			else
 			{
-				currentTotal += s[i].getTickets();
+				currentTotal += s[i].getPriority();
 			}
 		}
 	}
